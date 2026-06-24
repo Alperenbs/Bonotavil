@@ -565,7 +565,8 @@ function pickKym(id,el){
   const form = document.getElementById('calcForm');
   setTimeout(()=>{
     form.scrollIntoView({behavior:'smooth', block:'center'});
-    document.getElementById('inFiyat').focus({preventScroll:true});
+    const focusId = (selKym.type==='ISKONTO') ? 'inGetiri' : 'inFiyat';
+    document.getElementById(focusId).focus({preventScroll:true});
   }, 80);
 }
 
