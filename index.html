@@ -165,7 +165,7 @@
       <div class="row">
         <div class="field">
           <label>Valör Tarihi</label>
-          <input type="date" id="inValor" oninput="onFiyatInput()">
+          <input type="date" id="inValor" oninput="onValorChange()">
         </div>
         <div class="field"></div>
       </div>
@@ -607,7 +607,23 @@ function onGetiriInput(inp){
   fEl.value = fiyat.toLocaleString('tr-TR',{minimumFractionDigits:3,maximumFractionDigits:3});
 }
 
-// Ad + para birimi gösterimi: adda zaten (USD)/(EUR) varsa tekrar ekleme
+// Valör değişince (iskontolu): getiri sabit kalsın, fiyatı yeniden hesapla.
+// Getiri boşsa fiyattan getiriyi hesapla.
+function onValorChange(){
+  if(!selKym || selKym.type!=='ISKONTO') return;
+  const gEl = document.getElementById('inGetiri');
+  const fEl = document.getElementById('inFiyat');
+  const getiri = parseRate(gEl.value);
+  const gun = vadeGunIsk();
+  if(getiri && gun>0){
+    // getiri sabit → fiyatı güncelle (getiriye dokunma, oynama olmasın)
+    const fiyat = 100/(1+(getiri/100)*(gun/365));
+    fEl.value = fiyat.toLocaleString('tr-TR',{minimumFractionDigits:3,maximumFractionDigits:3});
+  } else {
+    // getiri boşsa fiyattan getiriyi hesapla
+    onFiyatInput();
+  }
+}
 function cleanName(name){ return String(name||'').replace(/\s*\((USD|EUR)\)\s*/gi,'').trim(); }
 function displayName(k){
   const base = cleanName(k.name);
