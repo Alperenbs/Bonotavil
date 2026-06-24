@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bono/Tahvil Getiri Hesaplama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eceef1;
+    --bg2:#e4e7eb;
+    --ink:#111418;
+    --card:#ffffff;
+    --line:#d3d8df;
+    --purple:#0a2a66;
+    --purple-d:#071f4d;
+    --purple-l:#eaeef6;
+    --accent:#0a2a66;
+    --gold:#b8860b;
+    --muted:#5b6675;
+    --tl:#0a2a66;
+    --yp:#1565a8;
+    --danger:#c0392b;
+    --win:#1a7a4c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'JetBrains Mono','Roboto Mono','Courier New',monospace;
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.5;
+    padding:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px}
+  header{
+    padding-bottom:16px;margin-bottom:8px;border-bottom:2px solid var(--purple);
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  header h1{font-size:21px;letter-spacing:.5px;font-weight:700;text-transform:uppercase;color:var(--accent)}
+  header .sub{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:500;margin-top:3px;text-transform:uppercase}
+  /* tabs */
+  .tabs{display:flex;gap:0;margin:22px 0 26px;border:1px solid var(--purple)}
+  .tab{
+    flex:1;padding:13px;text-align:center;cursor:pointer;background:var(--card);
+    font-family:inherit;font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+    border:none;color:var(--muted);transition:.12s;
+  }
+  .tab+.tab{border-left:1px solid var(--purple)}
+  .tab:hover{color:var(--accent);background:var(--purple-l)}
+  .tab.active{background:var(--purple);color:#fff}
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  /* generic */
+  label{display:block;font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase}
+  input,select{
+    width:100%;padding:11px 13px;border:1px solid var(--line);background:var(--card);
+    font-family:inherit;font-size:15px;color:var(--ink);border-radius:0;transition:.12s;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
+  input::placeholder{color:#9aa3b0}
+  .field{margin-bottom:16px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .btn{
+    background:var(--purple);color:#fff;border:none;padding:13px 24px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:0;
+    transition:.12s;
+  }
+  .btn:hover{background:var(--accent);box-shadow:0 0 12px rgba(255,140,0,.5)}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--purple);box-shadow:none}
+  .btn.ghost:hover{background:var(--purple-l);box-shadow:none}
+  .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);padding:7px 14px;font-size:12px}
+  .btn.danger:hover{background:var(--danger);color:#fff}
+  /* currency choice */
+  .cur-choice{display:flex;gap:14px;margin-bottom:26px}
+  .cur-pill{
+    flex:1;padding:28px 22px;border:1px solid var(--line);background:var(--card);text-align:center;cursor:pointer;
+    transition:.12s;border-radius:0;
+  }
+  .cur-pill:hover{border-color:var(--purple);background:var(--purple-l);box-shadow:0 0 12px rgba(255,140,0,.2)}
+  .cur-pill .big{font-size:26px;font-weight:700;letter-spacing:1px;color:var(--accent)}
+  .cur-pill .lbl{font-size:11px;letter-spacing:1px;color:var(--muted);margin-top:6px;font-weight:500;text-transform:uppercase}
+  .cur-pill.sel{border-color:var(--purple);border-width:1px;background:var(--purple-l);box-shadow:0 0 0 1px var(--purple),0 0 16px rgba(255,140,0,.25)}
+  .cur-pill.sel .big{color:var(--gold)}
+  .cur-pill.sel.yp{border-color:var(--yp);background:var(--purple-l)}
+  .cur-pill.sel.yp .big{color:var(--gold)}
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin-top:8px;background:var(--card);font-size:13px;border:1px solid var(--line)}
+  th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line)}
+  th{background:var(--purple);color:#fff;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  tr.total td{background:#e7faf0;font-weight:800;border-top:2px solid var(--purple);color:#079d4a;font-size:15px}
+  tr.subtotal td{background:#fff4e0;font-weight:800;border-top:1px solid var(--gold);color:#d97e00}
+  tr.invest td{background:#fdeae8;font-weight:800;color:#e02517}
+  .badge{display:inline-block;padding:2px 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:600;border:1px solid currentColor}
+  .badge.tl{color:var(--accent)}
+  .badge.yp{color:var(--yp)}
+  .badge.isk{color:var(--gold)}
+  /* summary cards */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:13px;margin:22px 0}
+  .scard{border:1px solid var(--line);background:var(--card);padding:17px}
+  .scard .k{font-size:10px;letter-spacing:1px;color:var(--muted);font-weight:700;text-transform:uppercase}
+  .scard .v{font-size:23px;font-weight:700;margin-top:7px;font-variant-numeric:tabular-nums;letter-spacing:0;color:var(--accent)}
+  .scard.win{border-color:var(--win)}
+  .scard.win .v{color:var(--win)}
+  .scard.yield{border-color:var(--purple);background:var(--purple-l)}
+  .scard.yield .v{color:var(--gold)}
+  .scard .v small{font-size:13px;font-weight:600;color:var(--muted)}
+  .note{font-size:11px;color:var(--muted);margin-top:7px}
+  .empty{padding:36px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line);background:var(--card)}
+  .seclabel{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--purple);font-weight:800;margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .hide{display:none}
+  .crow{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:10px}
+  .crow .x{background:transparent;border:1px solid var(--danger);color:var(--danger);padding:11px 14px;cursor:pointer;font-size:14px;transition:.12s}
+  .crow .x:hover{background:var(--danger);color:#fff}
+  .wedflag{font-size:10px;letter-spacing:.5px;margin-left:6px;text-transform:none;font-weight:600}
+  .list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 15px;border:1px solid var(--line);background:var(--card);margin-bottom:8px;cursor:pointer;transition:.12s}
+  .list-item:hover{border-color:var(--purple);background:var(--purple-l)}
+  .list-item.picked{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple),0 0 12px rgba(255,140,0,.2);background:var(--purple-l)}
+  .li-main{font-weight:700;font-size:15px;color:var(--accent)}
+  .li-sub{font-size:11px;color:var(--muted);margin-top:3px}
+  .card-box{border:1px solid var(--line);background:var(--card);padding:18px;margin-bottom:18px}
+  .cf-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px}
+  .site-footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;letter-spacing:3px;font-weight:600}
+  @media(max-width:600px){.row{grid-template-columns:1fr}.cur-choice{flex-direction:column}.wrap{padding:20px 14px 60px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Bono/Tahvil Getiri Hesaplama</h1>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('hesap')">Hesaplama</button>
+    <button class="tab" onclick="showTab('tanim')">Kıymet Tanımı</button>
+  </div>
+
+  <!-- ============ HESAPLAMA ============ -->
+  <div id="panel-hesap" class="panel active">
+    <div class="cur-choice">
+      <div class="cur-pill" id="pill-TL" onclick="selectCur('TL')">
+        <div class="big">TL DİBS</div><div class="lbl">Türk Lirası Devlet İç Borçlanma Senetleri</div>
+      </div>
+      <div class="cur-pill yp" id="pill-YP" onclick="selectCur('YP')">
+        <div class="big">YP DİBS</div><div class="lbl">Döviz Cinsi Devlet İç Borçlanma Senetleri</div>
+      </div>
+    </div>
+
+    <div id="kymList" class="hide">
+      <div class="seclabel" id="kymListLabel">Kıymet Seçin</div>
+      <div id="kymItems"></div>
+    </div>
+
+    <div id="calcForm" class="hide">
+      <div class="card-box">
+      <div class="seclabel" style="margin-top:0">Hesaplama Girdileri — <span id="selKymName"></span></div>
+      <div class="row">
+        <div class="field">
+          <label>Valör Tarihi</label>
+          <input type="date" id="inValor">
+        </div>
+        <div class="field"></div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Kirli Fiyat</label>
+          <input type="text" inputmode="decimal" id="inFiyat" placeholder="örn. 100,250">
+        </div>
+        <div class="field">
+          <label>Tutar (<span id="curLabel">TL</span>)</label>
+          <input type="text" inputmode="decimal" id="inTutar" oninput="formatTutar(this)" placeholder="örn. 1.000.000">
+        </div>
+      </div>
+      <button class="btn" onclick="hesapla()">Hesapla</button>
+      </div>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <!-- ============ KIYMET TANIMI ============ -->
+  <div id="panel-tanim" class="panel">
+    <div class="seclabel" id="formTitle">Yeni Kıymet Tanımla</div>
+    <div class="row">
+      <div class="field">
+        <label>Kıymet Türü</label>
+        <select id="dType" onchange="onTypeChange()">
+          <option value="TL_KUPON">TL Sabit Kuponlu</option>
+          <option value="YP_KUPON">YP Sabit Kuponlu</option>
+          <option value="ISKONTO">İskontolu</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kıymet Adı</label>
+        <input type="text" id="dName" placeholder="örn. TRT150528T18">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>ISIN</label><input type="text" id="dISIN" placeholder="TRT..."></div>
+      <div class="field"><label>Banka Kodu</label><input type="text" id="dBank" placeholder="örn. 0042"></div>
+    </div>
+    <div class="row" id="ccyRow" style="display:none">
+      <div class="field">
+        <label>Para Birimi (YP)</label>
+        <select id="dCcy"><option value="USD">USD</option><option value="EUR">EUR</option></select>
+      </div>
+      <div class="field"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>İhraç / Başlangıç Tarihi</label><input type="date" id="dStart"></div>
+      <div class="field"><label>İtfa (Vade) Tarihi</label><input type="date" id="dMaturity"></div>
+    </div>
+    <div id="couponBlock">
+      <label style="margin-bottom:10px">Kupon Ödemeleri — her satıra tarih ve o döneme ait kupon oranını (%) girin</label>
+      <div id="couponRows"></div>
+      <button class="btn ghost" style="padding:8px 16px;font-size:11px" onclick="addCouponRow()">+ Kupon Ekle</button>
+    </div>
+    <br>
+    <button class="btn" id="saveBtn" onclick="saveKym()">Kıymeti Kaydet</button>
+    <button class="btn ghost" id="cancelBtn" style="display:none;margin-left:8px" onclick="resetForm()">İptal</button>
+
+    <div class="seclabel">Tanımlı Kıymetler</div>
+    <div style="border:1px solid var(--line);background:var(--card);padding:14px;margin-bottom:16px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn" onclick="downloadData()">Listeyi Dosyaya İndir (data.json)</button>
+        <button class="btn ghost" onclick="document.getElementById('fileInput').click()">Dosyadan Yükle</button>
+        <input type="file" id="fileInput" accept=".json,application/json" style="display:none" onchange="loadFromFile(this)">
+        <span class="li-sub" id="exportMsg"></span>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn ghost" style="font-size:11px;padding:7px 14px" onclick="exportList()">Panoya Kopyala</button>
+        <button class="btn ghost" style="font-size:11px;padding:7px 14px" onclick="toggleImport()">Metinden Yükle</button>
+      </div>
+      <div id="importBox" style="display:none;margin-top:12px">
+        <label>Dışa aktarılan metni buraya yapıştırıp "Yükle"ye basın</label>
+        <textarea id="importText" style="width:100%;min-height:90px;font-family:monospace;font-size:11px;padding:10px;border:1px solid var(--line)"></textarea>
+        <button class="btn" style="margin-top:8px" onclick="importList()">Yükle</button>
+      </div>
+    </div>
+    <div id="defTL"></div>
+    <div id="defYP"></div>
+    <div id="defISK"></div>
+  </div>
+  <footer class="site-footer">ABS 2026</footer>
+</div>
+
+<script>
+/* ---------- veri ---------- */
+const SEED_KYMETLER = [{"type": "TL_KUPON", "cur": "TL", "name": "TRT120826T16", "isin": "TRT120826T16", "bank": "705", "start": "", "maturity": "2026-08-12", "coupons": [{"date": "2026-08-12", "rate": 18}], "id": 1786492800000}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT020926T17", "isin": "TRT020926T17", "bank": "734", "start": "", "maturity": "2026-09-02", "coupons": [{"date": "2026-09-02", "rate": 8.45}], "id": 1788307200001}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT100227T13", "isin": "TRT100227T13", "bank": "713", "start": "", "maturity": "2027-02-10", "coupons": [{"date": "2026-08-12", "rate": 16.3}, {"date": "2027-02-10", "rate": 16.3}], "id": 1802217600002}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT240227T17", "isin": "TRT240227T17", "bank": "721", "start": "", "maturity": "2027-02-24", "coupons": [{"date": "2026-08-26", "rate": 5.5}, {"date": "2027-02-24", "rate": 5.5}], "id": 1803427200003}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT050527T33", "isin": "TRT050527T33", "bank": "754", "start": "", "maturity": "2027-05-05", "coupons": [{"date": "2026-11-04", "rate": 20.5}, {"date": "2027-05-05", "rate": 20.5}], "id": 1809475200004}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT090627T12", "isin": "TRT090627T12", "bank": "771", "start": "", "maturity": "2027-06-09", "coupons": [{"date": "2026-12-09", "rate": 10.1}, {"date": "2027-06-09", "rate": 10.1}], "id": 1812499200005}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT140727T14", "isin": "TRT140727T14", "bank": "509", "start": "", "maturity": "2027-07-14", "coupons": [{"date": "2026-07-15", "rate": 18.92}, {"date": "2027-01-13", "rate": 18.92}, {"date": "2027-07-14", "rate": 18.92}], "id": 1815523200006}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT110827T16", "isin": "TRT110827T16", "bank": "758", "start": "", "maturity": "2027-08-11", "coupons": [{"date": "2026-08-12", "rate": 5.25}, {"date": "2027-02-10", "rate": 5.25}, {"date": "2027-08-11", "rate": 5.25}], "id": 1817942400007}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT150927T11", "isin": "TRT150927T11", "bank": "793", "start": "", "maturity": "2027-09-15", "coupons": [{"date": "2026-09-16", "rate": 5.14}, {"date": "2027-03-17", "rate": 5.14}, {"date": "2027-09-15", "rate": 5.14}], "id": 1820966400008}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT131027T36", "isin": "TRT131027T36", "bank": "757", "start": "", "maturity": "2027-10-13", "coupons": [{"date": "2026-10-14", "rate": 18.39}, {"date": "2027-04-14", "rate": 18.39}, {"date": "2027-10-13", "rate": 18.39}], "id": 1823385600009}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT160228T16", "isin": "TRT160228T16", "bank": "788", "start": "", "maturity": "2028-02-16", "coupons": [{"date": "2026-08-19", "rate": 4.55}, {"date": "2027-02-17", "rate": 4.55}, {"date": "2027-08-18", "rate": 4.55}, {"date": "2028-02-16", "rate": 4.55}], "id": 1834272000010}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT080328T15", "isin": "TRT080328T15", "bank": "706", "start": "", "maturity": "2028-03-08", "coupons": [{"date": "2026-09-09", "rate": 6.2}, {"date": "2027-03-10", "rate": 6.2}, {"date": "2027-09-08", "rate": 6.2}, {"date": "2028-03-08", "rate": 6.2}], "id": 1836086400011}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT150328T24", "isin": "TRT150328T24", "bank": "737", "start": "", "maturity": "2028-03-15", "coupons": [{"date": "2026-09-16", "rate": 18.4}, {"date": "2027-03-17", "rate": 18.4}, {"date": "2027-09-15", "rate": 18.4}, {"date": "2028-03-15", "rate": 18.4}], "id": 1836691200012}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT190728T18", "isin": "TRT190728T18", "bank": "767", "start": "", "maturity": "2028-07-19", "coupons": [{"date": "2026-07-22", "rate": 8.65}, {"date": "2027-01-20", "rate": 8.65}, {"date": "2027-07-21", "rate": 8.65}, {"date": "2028-01-19", "rate": 8.65}, {"date": "2028-07-19", "rate": 8.65}], "id": 1847577600013}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT081128T15", "isin": "TRT081128T15", "bank": "752", "start": "", "maturity": "2028-11-08", "coupons": [{"date": "2026-11-11", "rate": 15.54}, {"date": "2027-05-12", "rate": 15.54}, {"date": "2027-11-10", "rate": 15.54}, {"date": "2028-05-10", "rate": 15.54}, {"date": "2028-11-08", "rate": 15.54}], "id": 1857254400014}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT120929T12", "isin": "TRT120929T12", "bank": "791", "start": "", "maturity": "2029-09-12", "coupons": [{"date": "2026-09-16", "rate": 15}, {"date": "2027-03-17", "rate": 15}, {"date": "2027-09-15", "rate": 15}, {"date": "2028-03-15", "rate": 15}, {"date": "2028-09-13", "rate": 15}, {"date": "2029-03-14", "rate": 15}, {"date": "2029-09-12", "rate": 15}], "id": 1883865600015}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT100730T13", "isin": "TRT100730T13", "bank": "733", "start": "", "maturity": "2030-07-10", "coupons": [{"date": "2026-07-15", "rate": 17.05}, {"date": "2027-01-13", "rate": 17.05}, {"date": "2027-07-14", "rate": 17.05}, {"date": "2028-01-12", "rate": 17.05}, {"date": "2028-07-12", "rate": 17.05}, {"date": "2029-01-10", "rate": 17.05}, {"date": "2029-07-11", "rate": 17.05}, {"date": "2030-01-09", "rate": 17.05}, {"date": "2030-07-10", "rate": 17.05}], "id": 1909872000016}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT021030T18", "isin": "TRT021030T18", "bank": "717", "start": "", "maturity": "2030-10-02", "coupons": [{"date": "2026-10-07", "rate": 16.95}, {"date": "2027-04-07", "rate": 16.95}, {"date": "2027-10-06", "rate": 16.95}, {"date": "2028-04-05", "rate": 16.95}, {"date": "2028-10-04", "rate": 16.95}, {"date": "2029-04-04", "rate": 16.95}, {"date": "2029-10-03", "rate": 16.95}, {"date": "2030-04-03", "rate": 16.95}, {"date": "2030-10-02", "rate": 16.95}], "id": 1917129600017}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT131130T14", "isin": "TRT131130T14", "bank": "726", "start": "", "maturity": "2030-11-13", "coupons": [{"date": "2026-11-18", "rate": 5.85}, {"date": "2027-05-19", "rate": 5.85}, {"date": "2027-11-17", "rate": 5.85}, {"date": "2028-05-17", "rate": 5.85}, {"date": "2028-11-15", "rate": 5.85}, {"date": "2029-05-16", "rate": 5.85}, {"date": "2029-11-14", "rate": 5.85}, {"date": "2030-05-15", "rate": 5.85}, {"date": "2030-11-13", "rate": 5.85}], "id": 1920758400018}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT160431T35", "isin": "TRT160431T35", "bank": "768", "start": "", "maturity": "2031-04-16", "coupons": [{"date": "2026-10-21", "rate": 16.63}, {"date": "2027-04-21", "rate": 16.63}, {"date": "2027-10-20", "rate": 16.63}, {"date": "2028-04-19", "rate": 16.63}, {"date": "2028-10-18", "rate": 16.63}, {"date": "2029-04-18", "rate": 16.63}, {"date": "2029-10-17", "rate": 16.63}, {"date": "2030-04-17", "rate": 16.63}, {"date": "2030-10-16", "rate": 16.63}, {"date": "2031-04-16", "rate": 16.63}], "id": 1934064000019}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT280432T14", "isin": "TRT280432T14", "bank": "719", "start": "", "maturity": "2032-04-28", "coupons": [{"date": "2026-11-04", "rate": 10.75}, {"date": "2027-05-05", "rate": 10.75}, {"date": "2027-11-03", "rate": 10.75}, {"date": "2028-05-03", "rate": 10.75}, {"date": "2028-11-01", "rate": 10.75}, {"date": "2029-05-02", "rate": 10.75}, {"date": "2029-10-31", "rate": 10.75}, {"date": "2030-05-01", "rate": 10.75}, {"date": "2030-10-30", "rate": 10.75}, {"date": "2031-04-30", "rate": 10.75}, {"date": "2031-10-29", "rate": 10.75}, {"date": "2032-04-28", "rate": 10.75}], "id": 1966723200020}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT131032T13", "isin": "TRT131032T13", "bank": "753", "start": "", "maturity": "2032-10-13", "coupons": [{"date": "2026-10-21", "rate": 5.2}, {"date": "2027-04-21", "rate": 5.2}, {"date": "2027-10-20", "rate": 5.2}, {"date": "2028-04-19", "rate": 5.2}, {"date": "2028-10-18", "rate": 5.2}, {"date": "2029-04-18", "rate": 5.2}, {"date": "2029-10-17", "rate": 5.2}, {"date": "2030-04-17", "rate": 5.2}, {"date": "2030-10-16", "rate": 5.2}, {"date": "2031-04-16", "rate": 5.2}, {"date": "2031-10-15", "rate": 5.2}, {"date": "2032-04-14", "rate": 5.2}, {"date": "2032-10-13", "rate": 5.2}], "id": 1981238400021}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT130733T17", "isin": "TRT130733T17", "bank": "765", "start": "", "maturity": "2033-07-13", "coupons": [{"date": "2026-07-22", "rate": 8.9}, {"date": "2027-01-20", "rate": 8.9}, {"date": "2027-07-21", "rate": 8.9}, {"date": "2028-01-19", "rate": 8.9}, {"date": "2028-07-19", "rate": 8.9}, {"date": "2029-01-17", "rate": 8.9}, {"date": "2029-07-18", "rate": 8.9}, {"date": "2030-01-16", "rate": 8.9}, {"date": "2030-07-17", "rate": 8.9}, {"date": "2031-01-15", "rate": 8.9}, {"date": "2031-07-16", "rate": 8.9}, {"date": "2032-01-14", "rate": 8.9}, {"date": "2032-07-14", "rate": 8.9}, {"date": "2033-01-12", "rate": 8.9}, {"date": "2033-07-13", "rate": 8.9}], "id": 2004825600022}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT051033T12", "isin": "TRT051033T12", "bank": "778", "start": "", "maturity": "2033-10-05", "coupons": [{"date": "2026-10-14", "rate": 13.1}, {"date": "2027-04-14", "rate": 13.1}, {"date": "2027-10-13", "rate": 13.1}, {"date": "2028-04-12", "rate": 13.1}, {"date": "2028-10-11", "rate": 13.1}, {"date": "2029-04-11", "rate": 13.1}, {"date": "2029-10-10", "rate": 13.1}, {"date": "2030-04-10", "rate": 13.1}, {"date": "2030-10-09", "rate": 13.1}, {"date": "2031-04-09", "rate": 13.1}, {"date": "2031-10-08", "rate": 13.1}, {"date": "2032-04-07", "rate": 13.1}, {"date": "2032-10-06", "rate": 13.1}, {"date": "2033-04-06", "rate": 13.1}, {"date": "2033-10-05", "rate": 13.1}], "id": 2012083200023}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT270934T18", "isin": "TRT270934T18", "bank": "783", "start": "", "maturity": "2034-09-27", "coupons": [{"date": "2026-10-07", "rate": 13.85}, {"date": "2027-04-07", "rate": 13.85}, {"date": "2027-10-06", "rate": 13.85}, {"date": "2028-04-05", "rate": 13.85}, {"date": "2028-10-04", "rate": 13.85}, {"date": "2029-04-04", "rate": 13.85}, {"date": "2029-10-03", "rate": 13.85}, {"date": "2030-04-03", "rate": 13.85}, {"date": "2030-10-02", "rate": 13.85}, {"date": "2031-04-02", "rate": 13.85}, {"date": "2031-10-01", "rate": 13.85}, {"date": "2032-03-31", "rate": 13.85}, {"date": "2032-09-29", "rate": 13.85}, {"date": "2033-03-30", "rate": 13.85}, {"date": "2033-09-28", "rate": 13.85}, {"date": "2034-03-29", "rate": 13.85}, {"date": "2034-09-27", "rate": 13.85}], "id": 2042928000024}, {"type": "TL_KUPON", "cur": "TL", "name": "TRT050935T13", "isin": "TRT050935T13", "bank": "750", "start": "", "maturity": "2035-09-05", "coupons": [{"date": "2026-09-16", "rate": 15.03}, {"date": "2027-03-17", "rate": 15.03}, {"date": "2027-09-15", "rate": 15.03}, {"date": "2028-03-15", "rate": 15.03}, {"date": "2028-09-13", "rate": 15.03}, {"date": "2029-03-14", "rate": 15.03}, {"date": "2029-09-12", "rate": 15.03}, {"date": "2030-03-13", "rate": 15.03}, {"date": "2030-09-11", "rate": 15.03}, {"date": "2031-03-12", "rate": 15.03}, {"date": "2031-09-10", "rate": 15.03}, {"date": "2032-03-10", "rate": 15.03}, {"date": "2032-09-08", "rate": 15.03}, {"date": "2033-03-09", "rate": 15.03}, {"date": "2033-09-07", "rate": 15.03}, {"date": "2034-03-08", "rate": 15.03}, {"date": "2034-09-06", "rate": 15.03}, {"date": "2035-03-07", "rate": 15.03}, {"date": "2035-09-05", "rate": 15.03}], "id": 2072563200025}, {"id": 1784678400000, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT220726F11", "isin": "TRT220726F11", "bank": "555", "start": "", "maturity": "2026-07-22", "coupons": [{"date": "2026-07-22", "rate": 2.55}]}, {"id": 1787270400001, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT210826F11", "isin": "TRT210826F11", "bank": "534", "start": "", "maturity": "2026-08-21", "coupons": [{"date": "2026-08-21", "rate": 2.4}]}, {"id": 1801612800002, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT030227F18", "isin": "TRT030227F18", "bank": "510", "start": "", "maturity": "2027-02-03", "coupons": [{"date": "2026-08-05", "rate": 2.11}, {"date": "2027-02-03", "rate": 2.11}]}, {"id": 1804032000003, "type": "YP_KUPON", "cur": "YP", "ccy": "EUR", "name": "TRT030327F17", "isin": "TRT030327F17", "bank": "551", "start": "", "maturity": "2027-03-03", "coupons": [{"date": "2026-09-02", "rate": 1.4}, {"date": "2027-03-03", "rate": 1.4}]}, {"id": 1807660800004, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT140427F13", "isin": "TRT140427F13", "bank": "556", "start": "", "maturity": "2027-04-14", "coupons": [{"date": "2026-10-14", "rate": 2.23}, {"date": "2027-04-14", "rate": 2.23}]}, {"id": 1812499200099, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT090627F18", "isin": "TRT090627F18", "bank": "562", "start": "", "maturity": "2027-06-09", "coupons": [{"date": "2026-12-09", "rate": 2.6}, {"date": "2027-06-09", "rate": 2.6}]}, {"id": 1826582400006, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT191127F19", "isin": "TRT191127F19", "bank": "539", "start": "", "maturity": "2027-11-19", "coupons": [{"date": "2026-11-20", "rate": 2.1}, {"date": "2027-05-21", "rate": 2.1}, {"date": "2027-11-19", "rate": 2.1}]}, {"id": 1841529600007, "type": "YP_KUPON", "cur": "YP", "ccy": "USD", "name": "TRT100528F15", "isin": "TRT100528F15", "bank": "549", "start": "", "maturity": "2028-05-10", "coupons": [{"date": "2026-11-11", "rate": 2.6}, {"date": "2027-05-12", "rate": 2.6}, {"date": "2027-11-10", "rate": 2.6}, {"date": "2028-05-10", "rate": 2.6}]}, {"id": 1799193600508, "type": "ISKONTO", "cur": "TL", "name": "TRT060127T10", "isin": "TRT060127T10", "bank": "785", "start": "", "maturity": "2027-01-06", "coupons": []}, {"id": 1802217600509, "type": "ISKONTO", "cur": "TL", "name": "TRB100227T13", "isin": "TRB100227T13", "bank": "724", "start": "", "maturity": "2027-02-10", "coupons": []}, {"id": 1805241600510, "type": "ISKONTO", "cur": "TL", "name": "TRB170327T15", "isin": "TRB170327T15", "bank": "756", "start": "", "maturity": "2027-03-17", "coupons": []}, {"type": "ISKONTO", "cur": "TL", "name": "TRT020926A18", "isin": "TRT020926A18", "bank": "735", "start": "", "maturity": "2026-09-02", "coupons": [], "id": 1782038296790}, {"type": "ISKONTO", "cur": "TL", "name": "TRT120826A17", "isin": "TRT120826A17", "bank": "774", "start": "", "maturity": "2026-08-12", "coupons": [], "id": 1782038335187}];
+let userKymetler = JSON.parse(localStorage.getItem('userKymetler')||'[]');
+let seedOverrides = JSON.parse(localStorage.getItem('seedOverrides')||'{}');
+let deletedSeeds = JSON.parse(localStorage.getItem('deletedSeeds')||'{}');
+// eski kayıtlardaki ad içine sızmış (USD)/(EUR) parantezlerini temizle
+function _stripCcyParen(n){ return String(n||'').replace(/\s*\((USD|EUR)\)\s*/gi,'').trim(); }
+userKymetler.forEach(k=>{ if(k && k.name) k.name=_stripCcyParen(k.name); });
+Object.values(seedOverrides).forEach(k=>{ if(k && k.name) k.name=_stripCcyParen(k.name); });
+function buildKymetler(){
+  const seeds = SEED_KYMETLER
+    .filter(k=> !deletedSeeds[k.id])   // silinmiş gömülü kıymetleri hariç tut
+    .map(k=>{
+      const ov = seedOverrides[k.id];
+      return ov ? {...ov, id:k.id, _seed:true, _edited:true} : {...k, _seed:true};
+    });
+  // ISIN+tür bazında tekilleştir: gömülü kayıt önce gelir, kullanıcı kopyası elenir
+  const combined = [...seeds, ...userKymetler];
+  const seen = new Set();
+  const unique = [];
+  for(const k of combined){
+    const key = (k.isin||k.name)+'|'+k.type;
+    if(seen.has(key)) continue;
+    seen.add(key); unique.push(k);
+  }
+  return unique;
+}
+let kymetler = buildKymetler();
+function save(){
+  userKymetler = kymetler.filter(k=>!k._seed);
+  seedOverrides = {};
+  kymetler.filter(k=>k._seed && k._edited).forEach(k=>{ seedOverrides[k.id] = k; });
+  localStorage.setItem('userKymetler', JSON.stringify(userKymetler));
+  localStorage.setItem('seedOverrides', JSON.stringify(seedOverrides));
+}
+
+/* ---------- tab ---------- */
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='tanim') renderDefs();
+}
+
+/* ---------- kıymet tanımı ---------- */
+function onTypeChange(){
+  const t = document.getElementById('dType').value;
+  document.getElementById('couponBlock').style.display = (t==='ISKONTO')?'none':'block';
+  document.getElementById('ccyRow').style.display = (t==='YP_KUPON')?'grid':'none';
+  if(t!=='ISKONTO' && document.getElementById('couponRows').children.length===0) addCouponRow();
+}
+function addCouponRow(date='', rate=''){
+  const div = document.createElement('div');
+  div.className='crow';
+  div.innerHTML = `
+    <div><label>Kupon Tarihi <span class="wedflag"></span></label><input type="date" class="c-date" value="${date}" onchange="flagWed(this)"></div>
+    <div><label>Kupon Oranı (%)</label><input type="text" inputmode="decimal" class="c-rate" value="${rate}" placeholder="örn. 12,75"></div>
+    <button class="x" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('couponRows').appendChild(div);
+  const inp = div.querySelector('.c-date'); if(date) flagWed(inp);
+}
+function flagWed(inp){
+  const flag = inp.closest('.crow').querySelector('.wedflag');
+  if(!inp.value){ flag.textContent=''; return; }
+  const isWed = new Date(inp.value+'T00:00:00').getDay()===3;
+  flag.textContent = isWed ? '✓ Çarşamba' : '⚠ Çarşamba değil';
+  flag.style.color = isWed ? 'var(--win)' : 'var(--danger)';
+}
+let editingId = null;
+
+function saveKym(){
+  let wedWarnMsg = '';
+  const t = document.getElementById('dType').value;
+  const name = document.getElementById('dName').value.trim();
+  if(!name){ alert('Kıymet adı girin.'); return; }
+  const maturity = document.getElementById('dMaturity').value;
+  if(!maturity){ alert('İtfa tarihi girin.'); return; }
+  const cur = (t==='YP_KUPON')?'YP':'TL';
+  let coupons=[];
+  if(t!=='ISKONTO'){
+    document.querySelectorAll('#couponRows .crow').forEach(r=>{
+      const d=r.querySelector('.c-date').value;
+      const rt=parseRate(r.querySelector('.c-rate').value);
+      if(d && rt) coupons.push({date:d, rate:rt});
+    });
+    if(!coupons.length){ alert('En az bir kupon (tarih + oran) girin.'); return; }
+    coupons.sort((a,b)=> new Date(a.date)-new Date(b.date));
+    // Çarşamba olmayan kupon varsa kaydı engelleme; sadece bilgilendir
+    const notWed = coupons.filter(c=> new Date(c.date+'T00:00:00').getDay()!==3);
+    if(notWed.length) wedWarnMsg = notWed.length+' kupon tarihi Çarşamba değil ('+notWed.map(c=>fmtDate(c.date)).join(', ')+') — yine de kaydedildi.';
+  }
+  const data = {
+    type: t, cur, name,
+    isin: document.getElementById('dISIN').value.trim(),
+    bank: document.getElementById('dBank').value.trim(),
+    start: document.getElementById('dStart').value,
+    maturity, coupons
+  };
+  if(t==='YP_KUPON') data.ccy = document.getElementById('dCcy').value;
+  if(editingId!==null){
+    const idx = kymetler.findIndex(k=>k.id===editingId);
+    const wasSeed = kymetler[idx]._seed;
+    kymetler[idx] = {...data, id:editingId, _seed:wasSeed, _edited: wasSeed?true:undefined};
+    save(); renderDefs(); resetForm();
+    alert('Kıymet güncellendi: '+name + (wedWarnMsg?'\n\n⚠ '+wedWarnMsg:''));
+  } else {
+    kymetler.push({...data, id:Date.now()});
+    save(); renderDefs(); resetForm();
+    alert('Kıymet kaydedildi: '+name + (wedWarnMsg?'\n\n⚠ '+wedWarnMsg:''));
+  }
+}
+
+function editKym(id){
+  const k = kymetler.find(x=>x.id===id);
+  if(!k) return;
+  editingId = id;
+  document.getElementById('dType').value = k.type;
+  document.getElementById('dName').value = k.name;
+  document.getElementById('dISIN').value = k.isin||'';
+  document.getElementById('dBank').value = k.bank||'';
+  document.getElementById('dStart').value = k.start||'';
+  document.getElementById('dMaturity').value = k.maturity||'';
+  if(k.ccy) document.getElementById('dCcy').value = k.ccy;
+  document.getElementById('couponRows').innerHTML='';
+  (k.coupons||[]).forEach(c=> addCouponRow(c.date, c.rate));
+  onTypeChange();
+  document.getElementById('saveBtn').textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('cancelBtn').style.display='inline-block';
+  document.getElementById('formTitle').textContent = 'Kıymet Düzenle — '+k.name;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function downloadData(){
+  const clean = kymetler.map(({_seed,_edited,...k})=>k);
+  const blob = new Blob([JSON.stringify(clean, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'data.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const msg = document.getElementById('exportMsg');
+  msg.textContent = '✓ '+clean.length+' kıymet indirildi (data.json)';
+  msg.style.color = 'var(--win)';
+}
+function loadFromFile(input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let arr;
+    try{ arr = JSON.parse(e.target.result); }catch(err){ alert('Dosya geçerli değil (JSON hatası): '+err.message); return; }
+    if(!Array.isArray(arr)){ alert('Beklenen biçim bir liste değil.'); return; }
+    if(!confirm(arr.length+' kıymet yüklenecek. Mevcut liste bununla değiştirilsin mi?')) { input.value=''; return; }
+    userKymetler = arr.map(({_seed,_edited,...k})=>k);
+    seedOverrides = {}; deletedSeeds = {};
+    localStorage.setItem('userKymetler', JSON.stringify(userKymetler));
+    localStorage.setItem('seedOverrides', JSON.stringify(seedOverrides));
+    localStorage.setItem('deletedSeeds', JSON.stringify(deletedSeeds));
+    const userIds = new Set(userKymetler.map(k=>k.id));
+    const seeds = SEED_KYMETLER.filter(k=>!userIds.has(k.id)).map(k=>({...k,_seed:true}));
+    kymetler = [...seeds, ...userKymetler];
+    renderDefs();
+    const msg = document.getElementById('exportMsg');
+    msg.textContent = '✓ '+arr.length+' kıymet yüklendi';
+    msg.style.color = 'var(--win)';
+    input.value='';
+  };
+  reader.readAsText(f);
+}
+
+function exportList(){
+  // tum guncel kiymetleri temiz halde disa aktar (ic isaretler temizlenir)
+  const clean = kymetler.map(({_seed,_edited,...k})=>k);
+  const txt = JSON.stringify(clean, null, 2);
+  const msg = document.getElementById('exportMsg');
+  navigator.clipboard.writeText(txt).then(()=>{
+    msg.textContent = '✓ '+clean.length+' kıymet panoya kopyalandı';
+    msg.style.color = 'var(--win)';
+  }).catch(()=>{
+    // pano izni yoksa: ice aktar kutusuna yaz, kullanici elle kopyalasin
+    toggleImport(true);
+    document.getElementById('importText').value = txt;
+    msg.textContent = '⚠ Otomatik kopyalanamadı — aşağıdaki metni elle kopyalayın';
+    msg.style.color = 'var(--danger)';
+  });
+}
+function toggleImport(forceOpen){
+  const box = document.getElementById('importBox');
+  box.style.display = (forceOpen || box.style.display==='none') ? 'block':'none';
+}
+function importList(){
+  const raw = document.getElementById('importText').value.trim();
+  if(!raw){ alert('Önce metni yapıştırın.'); return; }
+  let arr;
+  try{ arr = JSON.parse(raw); }catch(e){ alert('Metin geçerli değil (JSON hatası): '+e.message); return; }
+  if(!Array.isArray(arr)){ alert('Beklenen biçim bir liste değil.'); return; }
+  if(!confirm(arr.length+' kıymet yüklenecek. Mevcut liste bununla değiştirilsin mi?')) return;
+  // hepsini kullanici kiymeti olarak yukle (gomulu seedi de bunlar ezer)
+  userKymetler = arr.map(({_seed,_edited,...k})=>k);
+  seedOverrides = {};
+  localStorage.setItem('userKymetler', JSON.stringify(userKymetler));
+  localStorage.setItem('seedOverrides', JSON.stringify(seedOverrides));
+  // seed ile cakisan id'leri ele: ayni id varsa kullanici surumu kalsin
+  const userIds = new Set(userKymetler.map(k=>k.id));
+  const seeds = SEED_KYMETLER.filter(k=>!userIds.has(k.id)).map(k=>({...k,_seed:true}));
+  kymetler = [...seeds, ...userKymetler];
+  renderDefs();
+  alert('Liste yüklendi: '+arr.length+' kıymet.');
+}
+function resetForm(){
+  editingId = null;
+  ['dName','dISIN','dBank','dStart','dMaturity'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('couponRows').innerHTML='';
+  document.getElementById('saveBtn').textContent = 'Kıymeti Kaydet';
+  document.getElementById('cancelBtn').style.display='none';
+  document.getElementById('formTitle').textContent = 'Yeni Kıymet Tanımla';
+  onTypeChange();
+}
+function delKym(id){
+  const k = kymetler.find(x=>x.id===id);
+  if(!k) return;
+  if(!confirm('Bu kıymet silinsin mi?')) return;
+  if(k._seed){ deletedSeeds[id] = true; localStorage.setItem('deletedSeeds', JSON.stringify(deletedSeeds)); }
+  kymetler = kymetler.filter(x=>x.id!==id); save(); renderDefs();
+}
+function renderDefs(){
+  const groups = {TL_KUPON:'defTL', YP_KUPON:'defYP', ISKONTO:'defISK'};
+  const titles = {TL_KUPON:'TL Sabit Kuponlu', YP_KUPON:'YP Sabit Kuponlu', ISKONTO:'İskontolu'};
+  const badges = {TL_KUPON:'tl', YP_KUPON:'yp', ISKONTO:'isk'};
+  for(const [tp,div] of Object.entries(groups)){
+    const items = kymetler.filter(k=>k.type===tp);
+    let html = `<div class="seclabel">${titles[tp]} (${items.length})</div>`;
+    if(!items.length){ html += `<div class="empty">Bu grupta tanımlı kıymet yok.</div>`; }
+    else items.forEach(k=>{
+      html += `<div class="list-item">
+        <div>
+          <div class="li-main"><span class="badge ${badges[tp]}">${titles[tp]}</span> &nbsp;${displayName(k)} ${k._edited?'<span class="badge isk" style="font-size:9px">düzenlendi</span>':''}</div>
+          <div class="li-sub">ISIN ${k.isin||'—'} · Banka ${k.bank||'—'} · İtfa ${fmtDate(k.maturity)} ${k.coupons&&k.coupons.length?('· '+k.coupons.length+' kupon'):''}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost" style="padding:7px 12px;font-size:11px" onclick="editKym(${k.id})">Düzenle</button>
+          <button class="btn danger" onclick="delKym(${k.id})">Sil</button>
+        </div>
+      </div>`;
+    });
+    document.getElementById(div).innerHTML = html;
+  }
+}
+
+/* ---------- hesaplama akışı ---------- */
+let selCur=null, selKym=null;
+function selectCur(c){
+  selCur=c; selKym=null;
+  document.getElementById('pill-TL').classList.toggle('sel', c==='TL');
+  document.getElementById('pill-YP').classList.toggle('sel', c==='YP');
+  document.getElementById('curLabel').textContent=c;
+  document.getElementById('calcForm').classList.add('hide');
+  document.getElementById('result').innerHTML='';
+  const list = kymetler.filter(k=>k.cur===c).sort((a,b)=> new Date(a.maturity)-new Date(b.maturity));
+  const box = document.getElementById('kymItems');
+  document.getElementById('kymListLabel').textContent = c+' Kıymet Seçin';
+  if(!list.length){ box.innerHTML=`<div class="empty">Bu para biriminde tanımlı kıymet yok. Önce "Kıymet Tanımı" sekmesinden ekleyin.</div>`; }
+  else box.innerHTML = list.map(k=>{
+    const b = k.type==='ISKONTO'?'isk':(k.cur==='TL'?'tl':'yp');
+    const tname = k.type==='ISKONTO'?'İskontolu':(k.cur==='TL'?'TL Sabit Kuponlu':'YP Sabit Kuponlu');
+    return `<div class="list-item" onclick="pickKym(${k.id},this)">
+      <div><div class="li-main"><span class="badge ${b}">${tname}</span> &nbsp;${k.bank?k.bank+'-':''}${displayName(k)}</div>
+      <div class="li-sub">İtfa ${fmtDate(k.maturity)}</div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('kymList').classList.remove('hide');
+}
+function pickKym(id,el){
+  selKym = kymetler.find(k=>k.id===id);
+  document.querySelectorAll('#kymItems .list-item').forEach(x=>x.classList.remove('picked'));
+  el.classList.add('picked');
+  document.getElementById('selKymName').textContent = displayName(selKym);
+  document.getElementById('curLabel').textContent = selKym.ccy || selKym.cur;
+  // fiyat placeholder: YP DİBS için ~1001,25, diğerleri için ~100,250
+  document.getElementById('inFiyat').placeholder = (selKym.type==='YP_KUPON') ? 'örn. 1001,25' : 'örn. 100,250';
+  // valör varsayılan: bugün
+  const t = new Date(); t.setMinutes(t.getMinutes()-t.getTimezoneOffset());
+  document.getElementById('inValor').value = t.toISOString().slice(0,10);
+  document.getElementById('calcForm').classList.remove('hide');
+  document.getElementById('result').innerHTML='';
+  // hesap formuna yumuşak kaydır ve fiyat alanına odaklan
+  const form = document.getElementById('calcForm');
+  setTimeout(()=>{
+    form.scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('inFiyat').focus({preventScroll:true});
+  }, 80);
+}
+
+function floorTo(n, step){ return Math.floor(n/step)*step; }
+
+// Ad + para birimi gösterimi: adda zaten (USD)/(EUR) varsa tekrar ekleme
+function cleanName(name){ return String(name||'').replace(/\s*\((USD|EUR)\)\s*/gi,'').trim(); }
+function displayName(k){
+  const base = cleanName(k.name);
+  return base + (k.ccy ? ' ('+k.ccy+')' : '');
+}
+
+// Tutar inputuna binlik nokta ayraci ekler (TR formati: nokta=binlik, virgul=ondalik)
+function formatTutar(inp){
+  let v = inp.value;
+  // izin verilen karakterler: rakam ve virgul
+  v = v.replace(/[^\d,]/g,'');
+  let [tam, ...ond] = v.split(',');
+  tam = tam.replace(/^0+(?=\d)/,''); // bastaki sifirlari at
+  // binlik gruplama
+  tam = tam.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  inp.value = ond.length ? tam+','+ond.join('').slice(0,4) : tam;
+}
+// "2.000.000,50" -> 2000000.50
+function parseTutar(s){
+  if(!s) return NaN;
+  return parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+}
+// Oran gibi tek ondalıklı değerler için: hem nokta hem virgül ondalık sayılır
+function parseRate(s){
+  if(s===''||s==null) return NaN;
+  return parseFloat(String(s).replace(',','.'));
+}
+
+function hesapla(){
+  if(!selKym){ alert('Kıymet seçin.'); return; }
+  const fiyat = parseTutar(document.getElementById('inFiyat').value);
+  const tutar = parseTutar(document.getElementById('inTutar').value);
+  if(!fiyat||fiyat<=0){ alert('Geçerli fiyat girin.'); return; }
+  if(!tutar||tutar<=0){ alert('Geçerli tutar girin.'); return; }
+
+  // YP kuponlu: par değeri 1000, yuvarlama 1000; diğerleri (TL): par 100, yuvarlama 10
+  const isYP = (selKym.type==='YP_KUPON');
+  const par = isYP ? 1000 : 100;
+  const step = isYP ? 1000 : 10;
+  const adetRaw = (tutar*par)/fiyat;
+  const adet = floorTo(adetRaw, step);
+  const yatirilan = (adet*fiyat)/par;
+
+  let rows=[], toplamKupon=0;
+  // valör tarihi: kuponlar bu tarihten SONRA ödeniyorsa alınır (valör günü veya öncesi alınmaz)
+  const valorStr = document.getElementById('inValor').value;
+  const valor = valorStr ? new Date(valorStr+'T00:00:00') : new Date(new Date().setHours(0,0,0,0));
+  if(selKym.type!=='ISKONTO' && selKym.coupons){
+    const future = selKym.coupons.filter(c=> new Date(c.date+'T00:00:00') > valor);
+    future.forEach((c,i)=>{
+      const k = adet * (c.rate/100);   // kupon = adet × oran
+      toplamKupon += k;
+      rows.push({lbl:`Kupon Ödemesi #${i+1} (%${fmtNum(c.rate,4)})`, date:fmtDate(c.date), val:k});
+    });
+  }
+  const anapara = adet;                 // vade sonu anapara = elindeki adet
+  const kazanc = (toplamKupon + anapara) - yatirilan;
+  const cur = selKym.ccy || selKym.cur;
+
+  // Yıllık getiri hesabı
+  const itfaDate = new Date(selKym.maturity+'T00:00:00');
+  const vadeGun = Math.round((itfaDate - valor)/86400000);
+  let basitGetiri = null, getiriNot = '';
+  if(selKym.type==='ISKONTO'){
+    // İskontolu: basit getiri = (anapara − yatırılan)/yatırılan × (365/vadeGün) × 100
+    if(vadeGun>0){ basitGetiri = ((anapara - yatirilan)/yatirilan)*(365/vadeGun)*100; getiriNot = `${vadeGun} gün · 365 bazlı`; }
+  } else {
+    // Kuponlu: Bloomberg yöntemi — dönemsel IRR × 2 (bond-equivalent yield)
+    // Nakit akışları nominal (100) bazında: her kupon = dönem oranı, son ödemede +100 anapara
+    const fut = (selKym.coupons||[]).filter(c=> new Date(c.date+'T00:00:00') > valor)
+                  .sort((a,b)=> new Date(a.date)-new Date(b.date));
+    if(fut.length){
+      const flows = fut.map(c=>({g: Math.round((new Date(c.date+'T00:00:00')-valor)/86400000), t: c.rate}));
+      flows[flows.length-1].t += 100;   // anapara (nominal 100 bazında)
+      // Fiyatı 100 bazına normalize et: YP'de fiyat 1000 bazlı girilir (örn. 1027,30 → 102,730)
+      const fiyat100 = isYP ? (fiyat/10) : fiyat;
+      if(flows.length===1 && flows[0].g<=182){
+        // Son kupon dönemi: tek ödeme kaldı ve 1 dönemden yakın → basit faiz (para piyasası)
+        basitGetiri = ((flows[0].t - fiyat100)/fiyat100)*(365/flows[0].g)*100;
+        getiriNot = `Basit faiz · ${flows[0].g} gün · 365 bazlı`;
+      } else {
+        // Bloomberg yöntemi: dönemsel IRR × 2 (bond-equivalent yield)
+        const firstFrac = flows[0].g/182; // ilk kupona kesirli dönem
+        const npv = (i)=> flows.reduce((s,f,idx)=> s + f.t/Math.pow(1+i, firstFrac+idx), 0) - fiyat100;
+        let lo=-0.99, hi=5, mid;
+        for(let it=0; it<200; it++){ mid=(lo+hi)/2; if(npv(mid)>0) lo=mid; else hi=mid; }
+        basitGetiri = mid*2*100;          // yıllıklandır
+        getiriNot = `Dönemsel %${fmtNum(mid*100,4)} × 2`;
+      }
+    }
+  }
+
+  let html = `<div class="seclabel">Sonuç — ${displayName(selKym)}</div>`;
+  html += `<div class="summary">
+    <div class="scard"><div class="k">Yatırılan Tutar</div><div class="v">${fmtNum(yatirilan,2)} <small>${cur}</small></div></div>
+    <div class="scard"><div class="k">Toplam Geri Dönüş Tutarı</div><div class="v">${fmtNum(toplamKupon+anapara,2)} <small>${cur}</small></div></div>
+    <div class="scard win"><div class="k">Toplam Kazanç</div><div class="v">${fmtNum(kazanc,2)} <small>${cur}</small></div></div>
+    ${basitGetiri!==null?`<div class="scard yield"><div class="k">Yıllık Basit Getiri</div><div class="v">%${fmtNum(basitGetiri,2)}</div><div class="note">${getiriNot}</div></div>`:''}
+  </div>`;
+
+  html += `<div class="cf-head">
+    <span class="seclabel" style="margin:0;border:none;padding:0">Nakit Akış Tablosu</span>
+    <button class="btn ghost" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this)">Kopyala</button>
+  </div>`;
+  html += `<table id="cfTable"><thead><tr><th>${selKym.bank?selKym.bank+'-':''}${selKym.isin||selKym.name}</th><th>Tarih</th><th class="num">Tutar (${cur})</th></tr></thead><tbody>`;
+  html += `<tr class="invest"><td>Yatırılan Tutar</td><td>${fmtDate(valor)}</td><td class="num">−${fmtNum(yatirilan,2)}</td></tr>`;
+  rows.forEach(r=>{ html += `<tr><td>${r.lbl}</td><td>${r.date}</td><td class="num">${fmtNum(r.val,2)}</td></tr>`; });
+  html += `<tr><td>Anapara Dönüşü</td><td>${fmtDate(selKym.maturity)}</td><td class="num">${fmtNum(anapara,2)}</td></tr>`;
+  html += `<tr class="subtotal"><td>Toplam Geri Dönüş Tutarı</td><td>—</td><td class="num">${fmtNum(toplamKupon+anapara,2)}</td></tr>`;
+  html += `<tr class="total"><td>Toplam Kazanç</td><td>—</td><td class="num">${fmtNum(kazanc,2)}</td></tr>`;
+  html += `</tbody></table>`;
+  document.getElementById('result').innerHTML = html;
+}
+
+/* ---------- yardımcılar ---------- */
+function copyCashflow(btn){
+  const table = document.getElementById('cfTable');
+  if(!table) return;
+  // Düz metin (TSV): Excel'e satır/sütun olarak yapışır
+  let tsv = '';
+  table.querySelectorAll('tr').forEach(tr=>{
+    const cells = [...tr.querySelectorAll('th,td')].map(c=> c.textContent.trim());
+    tsv += cells.join('\t') + '\n';
+  });
+  // Zengin HTML: Outlook/Word/Excel'e biçimli tablo olarak yapışır
+  const htmlTable = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px">'
+    + table.innerHTML + '</table>';
+  const okMsg = ()=>{ const t=btn.textContent; btn.textContent='✓ Kopyalandı'; setTimeout(()=>btn.textContent=t,1500); };
+  if(navigator.clipboard && window.ClipboardItem){
+    const item = new ClipboardItem({
+      'text/plain': new Blob([tsv], {type:'text/plain'}),
+      'text/html': new Blob([htmlTable], {type:'text/html'})
+    });
+    navigator.clipboard.write([item]).then(okMsg).catch(()=>{
+      navigator.clipboard.writeText(tsv).then(okMsg).catch(()=>alert('Kopyalanamadı.'));
+    });
+  } else {
+    navigator.clipboard.writeText(tsv).then(okMsg).catch(()=>alert('Kopyalanamadı.'));
+  }
+}
+function fmtNum(n,dec){ return Number(n).toLocaleString('tr-TR',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+function fmtDate(d){ if(!d) return '—'; const x=new Date(d); return x.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+
+/* init */
+onTypeChange();
+renderDefs();
+
+// Açılışta data.json varsa ortak listeyi oradan yükle (gömülü liste yedek kalır)
+(function loadSharedData(){
+  fetch('data.json?v='+Date.now())
+    .then(r=> r.ok ? r.json() : Promise.reject())
+    .then(arr=>{
+      if(Array.isArray(arr) && arr.length){
+        // data.json'daki liste ana kaynak: kullanıcı düzenlemeleri/silmeleri yine üstüne uygulanır
+        const cleaned = arr.map(({_seed,_edited,...k})=>k);
+        const userIds = new Set(userKymetler.map(k=>k.id));
+        const base = cleaned
+          .filter(k=> !deletedSeeds[k.id])
+          .map(k=> seedOverrides[k.id] ? {...seedOverrides[k.id], id:k.id, _seed:true, _edited:true} : {...k, _seed:true})
+          .filter(k=> !userIds.has(k.id));
+        // ISIN+tür tekilleştir
+        const seen=new Set(); const merged=[];
+        for(const k of [...base, ...userKymetler]){
+          const key=(k.isin||k.name)+'|'+k.type;
+          if(seen.has(key)) continue; seen.add(key); merged.push(k);
+        }
+        kymetler = merged;
+        renderDefs();
+        // hesaplama ekranında seçim listesi açıksa tazele
+        if(selCur) selectCur(selCur);
+      }
+    })
+    .catch(()=>{ /* data.json yoksa gömülü liste kullanılır, sorun değil */ });
+})();
+</script>
+</body>
+</html>
