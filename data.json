@@ -1253,5 +1253,21 @@
     "maturity": "2026-08-12",
     "coupons": [],
     "id": 1782038335187
+  },
+  {
+    "type": "TL_KUPON",
+    "cur": "TL",
+    "name": "DENEME",
+    "isin": "Deneme",
+    "bank": "8888",
+    "start": "2026-06-24",
+    "maturity": "2026-08-09",
+    "coupons": [
+      {
+        "date": "2026-08-09",
+        "rate": 38
+      }
+    ],
+    "id": 1782307690110
   }
 ]
