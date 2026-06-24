@@ -165,19 +165,30 @@
       <div class="row">
         <div class="field">
           <label>Valör Tarihi</label>
-          <input type="date" id="inValor">
+          <input type="date" id="inValor" oninput="onFiyatInput()">
         </div>
         <div class="field"></div>
       </div>
       <div class="row">
         <div class="field">
           <label>Kirli Fiyat</label>
-          <input type="text" inputmode="decimal" id="inFiyat" placeholder="örn. 100,250">
+          <input type="text" inputmode="decimal" id="inFiyat" oninput="onFiyatInput()" placeholder="örn. 100,250">
         </div>
-        <div class="field">
+        <div class="field" id="getiriField" style="display:none">
+          <label>Yıllık Basit Getiri (%)</label>
+          <input type="text" inputmode="decimal" id="inGetiri" oninput="onGetiriInput(this)" placeholder="örn. 42,50">
+        </div>
+        <div class="field" id="tutarField">
           <label>Tutar (<span id="curLabel">TL</span>)</label>
           <input type="text" inputmode="decimal" id="inTutar" oninput="formatTutar(this)" placeholder="örn. 1.000.000">
         </div>
+      </div>
+      <div class="row" id="tutarRowAlt" style="display:none">
+        <div class="field">
+          <label>Tutar (<span id="curLabel2">TL</span>)</label>
+          <input type="text" inputmode="decimal" id="inTutarAlt" oninput="formatTutar(this)" placeholder="örn. 1.000.000">
+        </div>
+        <div class="field"></div>
       </div>
       <button class="btn" onclick="hesapla()">Hesapla</button>
       </div>
@@ -532,8 +543,19 @@ function pickKym(id,el){
   el.classList.add('picked');
   document.getElementById('selKymName').textContent = displayName(selKym);
   document.getElementById('curLabel').textContent = selKym.ccy || selKym.cur;
+  document.getElementById('curLabel2').textContent = selKym.ccy || selKym.cur;
   // fiyat placeholder: YP DİBS için ~1001,25, diğerleri için ~100,250
   document.getElementById('inFiyat').placeholder = (selKym.type==='YP_KUPON') ? 'örn. 1001,25' : 'örn. 100,250';
+  // İskontolu: fiyat + getiri yan yana, tutar alt satırda; diğerleri: fiyat + tutar yan yana
+  const isk = (selKym.type==='ISKONTO');
+  document.getElementById('getiriField').style.display = isk ? 'block' : 'none';
+  document.getElementById('tutarField').style.display = isk ? 'none' : 'block';
+  document.getElementById('tutarRowAlt').style.display = isk ? 'grid' : 'none';
+  // alanları temizle
+  document.getElementById('inFiyat').value='';
+  document.getElementById('inGetiri').value='';
+  document.getElementById('inTutar').value='';
+  document.getElementById('inTutarAlt').value='';
   // valör varsayılan: bugün
   const t = new Date(); t.setMinutes(t.getMinutes()-t.getTimezoneOffset());
   document.getElementById('inValor').value = t.toISOString().slice(0,10);
@@ -548,6 +570,41 @@ function pickKym(id,el){
 }
 
 function floorTo(n, step){ return Math.floor(n/step)*step; }
+
+// İskontolu kıymet için valöre kalan gün
+function vadeGunIsk(){
+  if(!selKym) return 0;
+  const valorStr = document.getElementById('inValor').value;
+  const valor = valorStr ? new Date(valorStr+'T00:00:00') : new Date(new Date().setHours(0,0,0,0));
+  const itfa = new Date(selKym.maturity+'T00:00:00');
+  return Math.round((itfa - valor)/86400000);
+}
+// Kirli fiyat yazılınca getiriyi anlık hesapla (sadece iskontolu)
+function onFiyatInput(){
+  if(!selKym || selKym.type!=='ISKONTO') return;
+  const fiyat = parseRate(document.getElementById('inFiyat').value);
+  const gun = vadeGunIsk();
+  const gEl = document.getElementById('inGetiri');
+  if(!fiyat || fiyat<=0 || gun<=0){ gEl.value=''; return; }
+  const getiri = ((100-fiyat)/fiyat)*(365/gun)*100;
+  gEl.value = getiri.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+// Getiri yazılınca fiyatı anlık hesapla; girişte virgülden sonra 2 hane sınırı
+function onGetiriInput(inp){
+  if(!selKym || selKym.type!=='ISKONTO') return;
+  // sadece rakam ve tek virgül, virgülden sonra en fazla 2 hane
+  let v = inp.value.replace(/[^\d,]/g,'');
+  const parts = v.split(',');
+  if(parts.length>2) v = parts[0]+','+parts.slice(1).join('');
+  v = v.replace(/^(\d*),(\d{0,2}).*$/, (m,a,b)=> b!==undefined && v.includes(',') ? a+','+b : a);
+  inp.value = v;
+  const getiri = parseRate(v);
+  const gun = vadeGunIsk();
+  const fEl = document.getElementById('inFiyat');
+  if(!getiri || gun<=0){ fEl.value=''; return; }
+  const fiyat = 100/(1+(getiri/100)*(gun/365));
+  fEl.value = fiyat.toLocaleString('tr-TR',{minimumFractionDigits:3,maximumFractionDigits:3});
+}
 
 // Ad + para birimi gösterimi: adda zaten (USD)/(EUR) varsa tekrar ekleme
 function cleanName(name){ return String(name||'').replace(/\s*\((USD|EUR)\)\s*/gi,'').trim(); }
@@ -581,7 +638,8 @@ function parseRate(s){
 function hesapla(){
   if(!selKym){ alert('Kıymet seçin.'); return; }
   const fiyat = parseTutar(document.getElementById('inFiyat').value);
-  const tutar = parseTutar(document.getElementById('inTutar').value);
+  const tutarEl = (selKym.type==='ISKONTO') ? 'inTutarAlt' : 'inTutar';
+  const tutar = parseTutar(document.getElementById(tutarEl).value);
   if(!fiyat||fiyat<=0){ alert('Geçerli fiyat girin.'); return; }
   if(!tutar||tutar<=0){ alert('Geçerli tutar girin.'); return; }
 
