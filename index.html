@@ -767,12 +767,29 @@ function bxtRecalc(src){
   const accr100 = bxtAccruedCalc();      // 100 bazında accrued
   const elT=document.getElementById('bxtTemiz'), elK=document.getElementById('bxtKirli'),
         elG=document.getElementById('bxtGetiri'), elA=document.getElementById('bxtAccrued');
-  // accrued göster (gösterim bazında)
-  elA.value = bxtFmt(accr100*(base/100), fiyatDec);
+  // accrued'ı gösterim hassasiyetinde yuvarla (tutarlılık için bunu temel al)
+  const accrDisp = Number((accr100*(base/100)).toFixed(fiyatDec)); // gösterilen accrued
+  elA.value = bxtFmt(accrDisp, fiyatDec);
 
+  // Gösterimde "kirli = temiz + accrued" her zaman tutsun:
+  // kaynak alana göre birini yuvarla, diğerini yuvarlanmış accrued ile türet.
   function show(temiz100, kirli100, getiri, skip){
-    if(skip!=='temiz') elT.value = temiz100!=null ? bxtFmt(temiz100*(base/100), fiyatDec) : '';
-    if(skip!=='kirli') elK.value = kirli100!=null ? bxtFmt(kirli100*(base/100), fiyatDec) : '';
+    let temizDisp = temiz100!=null ? Number((temiz100*(base/100)).toFixed(fiyatDec)) : null;
+    let kirliDisp = kirli100!=null ? Number((kirli100*(base/100)).toFixed(fiyatDec)) : null;
+    if(skip==='temiz' && temizDisp!=null){
+      // kullanıcı temiz girdi: kirli = temiz(girilen) + accrued(yuvarlı)
+      const tIn = parseTutar(document.getElementById('bxtTemiz').value);
+      kirliDisp = Number((tIn + accrDisp).toFixed(fiyatDec));
+    } else if(skip==='kirli' && kirliDisp!=null){
+      // kullanıcı kirli girdi: temiz = kirli(girilen) − accrued(yuvarlı)
+      const kIn = parseTutar(document.getElementById('bxtKirli').value);
+      temizDisp = Number((kIn - accrDisp).toFixed(fiyatDec));
+    } else if(kirliDisp!=null){
+      // getiriden geldi: kirliyi temel al, temiz = kirli − accrued(yuvarlı)
+      temizDisp = Number((kirliDisp - accrDisp).toFixed(fiyatDec));
+    }
+    if(skip!=='temiz') elT.value = temizDisp!=null ? bxtFmt(temizDisp, fiyatDec) : '';
+    if(skip!=='kirli') elK.value = kirliDisp!=null ? bxtFmt(kirliDisp, fiyatDec) : '';
     if(skip!=='getiri') elG.value = getiri!=null ? bxtFmt(getiri, 2) : '';
   }
 
