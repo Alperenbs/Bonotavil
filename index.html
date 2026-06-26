@@ -210,14 +210,11 @@
           <option value="ISKONTO">İskontolu</option>
         </select>
       </div>
-      <div class="field">
-        <label>Kıymet Adı</label>
-        <input type="text" id="dName" placeholder="örn. TRT150528T18">
-      </div>
+      <div class="field"><label>ISIN</label><input type="text" id="dISIN" placeholder="TRT..."></div>
     </div>
     <div class="row">
-      <div class="field"><label>ISIN</label><input type="text" id="dISIN" placeholder="TRT..."></div>
       <div class="field"><label>Banka Kodu</label><input type="text" id="dBank" placeholder="örn. 0042"></div>
+      <div class="field"></div>
     </div>
     <div class="row" id="ccyRow" style="display:none">
       <div class="field">
@@ -339,8 +336,9 @@ let editingId = null;
 function saveKym(){
   let wedWarnMsg = '';
   const t = document.getElementById('dType').value;
-  const name = document.getElementById('dName').value.trim();
-  if(!name){ alert('Kıymet adı girin.'); return; }
+  const isin = document.getElementById('dISIN').value.trim();
+  if(!isin){ alert('ISIN girin.'); return; }
+  const name = isin; // ad ayrıca tutulmuyor; ISIN ad olarak kullanılır
   const maturity = document.getElementById('dMaturity').value;
   if(!maturity){ alert('İtfa tarihi girin.'); return; }
   const cur = (t==='YP_KUPON')?'YP':'TL';
@@ -359,7 +357,7 @@ function saveKym(){
   }
   const data = {
     type: t, cur, name,
-    isin: document.getElementById('dISIN').value.trim(),
+    isin: isin,
     bank: document.getElementById('dBank').value.trim(),
     start: document.getElementById('dStart').value,
     maturity, coupons
@@ -383,8 +381,7 @@ function editKym(id){
   if(!k) return;
   editingId = id;
   document.getElementById('dType').value = k.type;
-  document.getElementById('dName').value = k.name;
-  document.getElementById('dISIN').value = k.isin||'';
+  document.getElementById('dISIN').value = k.isin||k.name||'';
   document.getElementById('dBank').value = k.bank||'';
   document.getElementById('dStart').value = k.start||'';
   document.getElementById('dMaturity').value = k.maturity||'';
@@ -394,7 +391,7 @@ function editKym(id){
   onTypeChange();
   document.getElementById('saveBtn').textContent = 'Değişiklikleri Kaydet';
   document.getElementById('cancelBtn').style.display='inline-block';
-  document.getElementById('formTitle').textContent = 'Kıymet Düzenle — '+k.name;
+  document.getElementById('formTitle').textContent = 'Kıymet Düzenle — '+(k.isin||k.name);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -477,7 +474,7 @@ function importList(){
 }
 function resetForm(){
   editingId = null;
-  ['dName','dISIN','dBank','dStart','dMaturity'].forEach(i=>document.getElementById(i).value='');
+  ['dISIN','dBank','dStart','dMaturity'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('couponRows').innerHTML='';
   document.getElementById('saveBtn').textContent = 'Kıymeti Kaydet';
   document.getElementById('cancelBtn').style.display='none';
