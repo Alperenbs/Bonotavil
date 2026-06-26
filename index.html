@@ -91,7 +91,7 @@
   /* tables */
   table{width:100%;border-collapse:collapse;margin-top:8px;background:var(--card);font-size:13px;border:1px solid var(--line)}
   th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line)}
-  th{background:var(--purple);color:#fff;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+  th{background:var(--purple);color:#fff;font-size:12.5px;letter-spacing:.5px;text-transform:uppercase;font-weight:700}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   tr:last-child td{border-bottom:none}
   tr.total td{background:#e7faf0;font-weight:800;border-top:2px solid var(--purple);color:#079d4a;font-size:15px}
@@ -113,7 +113,7 @@
   .scard .v small{font-size:13px;font-weight:600;color:var(--muted)}
   .note{font-size:11px;color:var(--muted);margin-top:7px}
   .empty{padding:36px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line);background:var(--card)}
-  .seclabel{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--purple);font-weight:800;margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .seclabel{font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple);font-weight:800;margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
   .hide{display:none}
   .crow{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-bottom:10px}
   .crow .x{background:transparent;border:1px solid var(--danger);color:var(--danger);padding:11px 14px;cursor:pointer;font-size:14px;transition:.12s}
@@ -124,6 +124,7 @@
   .list-item.picked{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple),0 0 12px rgba(255,140,0,.2);background:var(--purple-l)}
   .li-main{font-weight:700;font-size:15px;color:var(--accent)}
   .li-sub{font-size:11px;color:var(--muted);margin-top:3px}
+  .li-date{font-size:12.5px;color:var(--purple);margin-top:4px;font-weight:700}
   .card-box{border:1px solid var(--line);background:var(--card);padding:18px;margin-bottom:18px}
   .cf-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px}
   .site-footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;letter-spacing:3px;font-weight:600}
@@ -532,7 +533,7 @@ function selectCur(c){
     const tname = k.type==='ISKONTO'?'İskontolu':(k.cur==='TL'?'TL Sabit Kuponlu':'YP Sabit Kuponlu');
     return `<div class="list-item" onclick="pickKym(${k.id},this)">
       <div><div class="li-main"><span class="badge ${b}">${tname}</span> &nbsp;${k.bank?k.bank+'-':''}${displayName(k)}</div>
-      <div class="li-sub">İtfa ${fmtDate(k.maturity)}</div></div>
+      <div class="li-date">İtfa Tarihi: ${fmtDate(k.maturity)}</div></div>
     </div>`;
   }).join('');
   document.getElementById('kymList').classList.remove('hide');
