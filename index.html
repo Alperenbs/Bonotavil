@@ -127,21 +127,67 @@
   .li-date{font-size:12.5px;color:var(--purple);margin-top:4px;font-weight:700}
   .card-box{border:1px solid var(--line);background:var(--card);padding:18px;margin-bottom:18px}
   .cf-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px}
+  #bxtBtn.on{background:var(--gold)}
+  .suggest-box{position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--card);border:1px solid var(--purple);border-top:none;max-height:260px;overflow-y:auto;box-shadow:0 6px 16px rgba(10,42,102,.15)}
+  .suggest-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px}
+  .suggest-item:hover,.suggest-item.active{background:var(--purple-l)}
+  .suggest-item .si-isin{font-weight:700;color:var(--purple)}
+  .suggest-item .si-meta{font-size:11px;color:var(--muted);margin-top:2px}
   .site-footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;letter-spacing:3px;font-weight:600}
   @media(max-width:600px){.row{grid-template-columns:1fr}.cur-choice{flex-direction:column}.wrap{padding:20px 14px 60px}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header style="justify-content:space-between">
     <div>
       <h1>Bono/Tahvil Getiri Hesaplama</h1>
     </div>
+    <button class="btn" id="bxtBtn" style="padding:9px 18px;font-size:13px" onclick="toggleBxt()">BXT</button>
   </header>
 
   <div class="tabs">
     <button class="tab active" onclick="showTab('hesap')">Hesaplama</button>
     <button class="tab" onclick="showTab('tanim')">Kıymet Tanımı</button>
+  </div>
+
+  <!-- ============ BXT EKRANI ============ -->
+  <div id="panel-bxt" class="panel" style="display:none">
+    <div class="seclabel" style="margin-top:0">BXT — Fiyat / Getiri Ekranı</div>
+    <div class="card-box">
+      <div class="row">
+        <div class="field" style="position:relative">
+          <label>ISIN veya Banka Kodu</label>
+          <input type="text" id="bxtKod" autocomplete="off" oninput="bxtSuggest()" onfocus="bxtSuggest()" placeholder="örn. TRT050935T13 veya 750">
+          <div id="bxtSuggestBox" class="suggest-box" style="display:none"></div>
+        </div>
+        <div class="field">
+          <label>Valör Tarihi</label>
+          <input type="date" id="bxtValor" oninput="bxtRecalc('valor')">
+        </div>
+      </div>
+      <div id="bxtInfo" class="li-date" style="display:none;margin-bottom:14px"></div>
+      <div class="row">
+        <div class="field">
+          <label>Temiz Fiyat</label>
+          <input type="text" inputmode="decimal" id="bxtTemiz" oninput="bxtRecalc('temiz')" placeholder="—">
+        </div>
+        <div class="field">
+          <label>Yıllık Basit Getiri (%)</label>
+          <input type="text" inputmode="decimal" id="bxtGetiri" oninput="bxtRecalc('getiri')" placeholder="—">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Kirli Fiyat</label>
+          <input type="text" inputmode="decimal" id="bxtKirli" oninput="bxtRecalc('kirli')" placeholder="—">
+        </div>
+        <div class="field">
+          <label>İşlemiş Kupon (Accrued)</label>
+          <input type="text" id="bxtAccrued" readonly placeholder="—" style="background:var(--bg2)">
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ============ HESAPLAMA ============ -->
@@ -300,6 +346,9 @@ function save(){
 
 /* ---------- tab ---------- */
 function showTab(t){
+  // BXT açıksa kapat
+  const bxt=document.getElementById('panel-bxt');
+  if(bxt){ bxt.style.display='none'; bxt.classList.remove('active'); document.getElementById('bxtBtn')?.classList.remove('on'); }
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   event.target.classList.add('active');
@@ -569,6 +618,194 @@ function pickKym(id,el){
 }
 
 function floorTo(n, step){ return Math.floor(n/step)*step; }
+
+/* ============ BXT EKRANI ============ */
+let bxtKym = null;
+function toggleBxt(){
+  const p = document.getElementById('panel-bxt');
+  const isOpen = p.style.display!=='none';
+  if(isOpen){
+    p.style.display='none'; p.classList.remove('active');
+    document.getElementById('bxtBtn').classList.remove('on');
+    // Hesaplama sekmesine dön
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('.tabs .tab').classList.add('active');
+    document.getElementById('panel-hesap').classList.add('active');
+  } else {
+    document.getElementById('panel-hesap').classList.remove('active');
+    document.getElementById('panel-tanim').classList.remove('active');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    p.style.display='block'; p.classList.add('active');
+    document.getElementById('bxtBtn').classList.add('on');
+    const t=new Date(); t.setMinutes(t.getMinutes()-t.getTimezoneOffset());
+    if(!document.getElementById('bxtValor').value) document.getElementById('bxtValor').value=t.toISOString().slice(0,10);
+  }
+}
+// Yazdıkça eşleşen kıymetleri öner
+function bxtSuggest(){
+  const q = document.getElementById('bxtKod').value.trim().toUpperCase();
+  const box = document.getElementById('bxtSuggestBox');
+  if(!q){ box.style.display='none'; document.getElementById('bxtInfo').style.display='none'; bxtKym=null; bxtClear(); return; }
+  // ISIN içinde geçen veya banka kodu eşleşen, vade sırasına göre
+  const matches = kymetler
+    .filter(k=> (k.isin||'').toUpperCase().includes(q) || (k.bank||'').includes(q))
+    .sort((a,b)=> new Date(a.maturity)-new Date(b.maturity))
+    .slice(0,20);
+  if(!matches.length){ box.style.display='none'; bxtFindKym(); return; }
+  box.innerHTML = matches.map(k=>{
+    const tname = k.type==='ISKONTO'?'İskontolu':(k.cur==='TL'?'TL Sabit Kuponlu':'YP Sabit Kuponlu');
+    return `<div class="suggest-item" onclick="bxtPick('${k.isin}','${k.type}')">
+      <div class="si-isin">${k.bank?k.bank+'-':''}${k.isin}${k.ccy?' ('+k.ccy+')':''}</div>
+      <div class="si-meta">${tname} · İtfa ${fmtDate(k.maturity)}</div>
+    </div>`;
+  }).join('');
+  box.style.display='block';
+}
+// Öneriden seç
+function bxtPick(isin, type){
+  document.getElementById('bxtKod').value = isin;
+  document.getElementById('bxtSuggestBox').style.display='none';
+  bxtFindKym();
+}
+// Dışarı tıklayınca öneri kutusunu kapat
+document.addEventListener('click', (e)=>{
+  const box=document.getElementById('bxtSuggestBox');
+  const inp=document.getElementById('bxtKod');
+  if(box && inp && !box.contains(e.target) && e.target!==inp){ box.style.display='none'; }
+});
+
+// ISIN veya banka koduyla kıymet bul
+function bxtFindKym(){
+  const q = document.getElementById('bxtKod').value.trim().toUpperCase();
+  const info = document.getElementById('bxtInfo');
+  bxtKym = null;
+  if(!q){ info.style.display='none'; bxtClear(); return; }
+  bxtKym = kymetler.find(k=> (k.isin||'').toUpperCase()===q || (k.bank||'')===q)
+        || kymetler.find(k=> (k.isin||'').toUpperCase().includes(q));
+  if(bxtKym){
+    const tname = bxtKym.type==='ISKONTO'?'İskontolu':(bxtKym.cur==='TL'?'TL Sabit Kuponlu':'YP Sabit Kuponlu');
+    info.style.display='block';
+    info.textContent = `${bxtKym.bank?bxtKym.bank+'-':''}${bxtKym.isin}${bxtKym.ccy?' ('+bxtKym.ccy+')':''} · ${tname} · İtfa ${fmtDate(bxtKym.maturity)}`;
+    bxtRecalc('kod');
+  } else {
+    info.style.display='block'; info.textContent='Kıymet bulunamadı.';
+    bxtClear();
+  }
+}
+function bxtClear(){
+  ['bxtTemiz','bxtGetiri','bxtKirli','bxtAccrued'].forEach(id=>document.getElementById(id).value='');
+}
+// BXT valör → gün ve accrued hesapları
+function bxtValorDate(){
+  const v=document.getElementById('bxtValor').value;
+  return v? new Date(v+'T00:00:00') : new Date(new Date().setHours(0,0,0,0));
+}
+// İşlemiş kupon (accrued), nominal 100 bazında — kuponlularda
+function bxtAccruedCalc(){
+  if(!bxtKym || bxtKym.type==='ISKONTO' || !bxtKym.coupons || !bxtKym.coupons.length) return 0;
+  const valor=bxtValorDate();
+  const dates=bxtKym.coupons.map(c=>new Date(c.date+'T00:00:00')).sort((a,b)=>a-b);
+  let prev=null,next=null;
+  for(const d of dates){ if(d<valor) prev=d; else { next=d; break; } }
+  if(!next) return 0;
+  if(!prev) prev=new Date(next.getTime()-182*86400000);
+  const gecen=Math.round((valor-prev)/86400000);
+  // dönem oranı = ilgili kuponun oranı (next'in oranı)
+  const oran = bxtKym.coupons.find(c=> c.date===next.toISOString().slice(0,10))?.rate ?? bxtKym.coupons[0].rate;
+  return oran*(gecen/182);
+}
+// Kirli fiyattan getiri (100 bazında) — site mantığıyla aynı
+function bxtGetiriFromKirli(kirli100){
+  const valor=bxtValorDate();
+  if(bxtKym.type==='ISKONTO'){
+    const itfa=new Date(bxtKym.maturity+'T00:00:00');
+    const gun=Math.round((itfa-valor)/86400000);
+    if(gun<=0) return null;
+    return ((100-kirli100)/kirli100)*(365/gun)*100;
+  }
+  const fut=(bxtKym.coupons||[]).filter(c=>new Date(c.date+'T00:00:00')>valor).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!fut.length) return null;
+  const flows=fut.map(c=>({g:Math.round((new Date(c.date+'T00:00:00')-valor)/86400000),t:c.rate}));
+  flows[flows.length-1].t+=100;
+  if(flows.length===1 && flows[0].g<=182){
+    return ((flows[0].t-kirli100)/kirli100)*(365/flows[0].g)*100;
+  }
+  const firstFrac=flows[0].g/182;
+  const npv=(i)=>flows.reduce((s,f,idx)=>s+f.t/Math.pow(1+i,firstFrac+idx),0)-kirli100;
+  let lo=-0.99,hi=5,mid;
+  for(let it=0;it<200;it++){mid=(lo+hi)/2;if(npv(mid)>0)lo=mid;else hi=mid;}
+  return mid*2*100;
+}
+// Getiriden kirli fiyat (100 bazında) — yukarıdakinin tersi
+function bxtKirliFromGetiri(getiri){
+  const valor=bxtValorDate();
+  if(bxtKym.type==='ISKONTO'){
+    const itfa=new Date(bxtKym.maturity+'T00:00:00');
+    const gun=Math.round((itfa-valor)/86400000);
+    if(gun<=0) return null;
+    return 100/(1+(getiri/100)*(gun/365));
+  }
+  const fut=(bxtKym.coupons||[]).filter(c=>new Date(c.date+'T00:00:00')>valor).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!fut.length) return null;
+  const flows=fut.map(c=>({g:Math.round((new Date(c.date+'T00:00:00')-valor)/86400000),t:c.rate}));
+  flows[flows.length-1].t+=100;
+  if(flows.length===1 && flows[0].g<=182){
+    // basit faiz tersine: kirli = nakit/(1+getiri/100*gun/365)
+    return flows[0].t/(1+(getiri/100)*(flows[0].g/365));
+  }
+  const i=getiri/2/100; // dönemsel oran
+  const firstFrac=flows[0].g/182;
+  return flows.reduce((s,f,idx)=>s+f.t/Math.pow(1+i,firstFrac+idx),0);
+}
+const bxtFmt=(n,d)=> Number(n).toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
+// Ana senkron: hangi alan değiştiyse ona göre diğerlerini hesapla
+function bxtRecalc(src){
+  if(!bxtKym) return;
+  const isYP = bxtKym.type==='YP_KUPON';
+  const base = 100;                      // BXT ekranı: tüm kıymetlerde 100 bazlı fiyat
+  const fiyatDec = 3;                    // 3 ondalık
+  const accr100 = bxtAccruedCalc();      // 100 bazında accrued
+  const elT=document.getElementById('bxtTemiz'), elK=document.getElementById('bxtKirli'),
+        elG=document.getElementById('bxtGetiri'), elA=document.getElementById('bxtAccrued');
+  // accrued göster (gösterim bazında)
+  elA.value = bxtFmt(accr100*(base/100), fiyatDec);
+
+  function show(temiz100, kirli100, getiri, skip){
+    if(skip!=='temiz') elT.value = temiz100!=null ? bxtFmt(temiz100*(base/100), fiyatDec) : '';
+    if(skip!=='kirli') elK.value = kirli100!=null ? bxtFmt(kirli100*(base/100), fiyatDec) : '';
+    if(skip!=='getiri') elG.value = getiri!=null ? bxtFmt(getiri, 2) : '';
+  }
+
+  if(src==='getiri'){
+    let v=document.getElementById('bxtGetiri').value.replace(/[^\d,]/g,'');
+    const getiri=parseRate(v);
+    if(!getiri){ return; }
+    const kirli100=bxtKirliFromGetiri(getiri);
+    if(kirli100==null) return;
+    const temiz100=kirli100-accr100;
+    show(temiz100, kirli100, getiri, 'getiri');
+  } else if(src==='temiz'){
+    const temiz100=parseTutar(document.getElementById('bxtTemiz').value)/(base/100);
+    if(!temiz100) return;
+    const kirli100=temiz100+accr100;
+    const getiri=bxtGetiriFromKirli(kirli100);
+    show(temiz100, kirli100, getiri, 'temiz');
+  } else if(src==='kirli'){
+    const kirli100=parseTutar(document.getElementById('bxtKirli').value)/(base/100);
+    if(!kirli100) return;
+    const temiz100=kirli100-accr100;
+    const getiri=bxtGetiriFromKirli(kirli100);
+    show(temiz100, kirli100, getiri, 'kirli');
+  } else {
+    // kod veya valör değişti: mevcut bir değer varsa onu koru
+    const gv=parseRate(document.getElementById('bxtGetiri').value);
+    const tv=parseTutar(document.getElementById('bxtTemiz').value);
+    if(gv){ bxtRecalc('getiri'); }
+    else if(tv){ bxtRecalc('temiz'); }
+    else { elA.value = bxtFmt(accr100*(base/100), fiyatDec); }
+  }
+}
+
 
 // İskontolu kıymet için valöre kalan gün
 function vadeGunIsk(){
