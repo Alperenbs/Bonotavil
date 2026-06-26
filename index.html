@@ -803,27 +803,32 @@ function bxtRecalc(src){
     const elB = document.getElementById('bxtBilesik');
     if(getiri!=null){
       const s = getiri/100;
-      let bilesik;
+      let bilesik=null;
       const valor=bxtValorDate();
-      // Son dönem mi? (iskontolu VEYA tek kupon kaldı ve ≤182 gün) → para piyasası bileşiklemesi
-      let sonDonem = (bxtKym.type==='ISKONTO');
-      let gunSon = 0;
       if(bxtKym.type==='ISKONTO'){
         const itfa=new Date(bxtKym.maturity+'T00:00:00');
-        gunSon=Math.round((itfa-valor)/86400000);
+        const gun=Math.round((itfa-valor)/86400000);
+        bilesik = gun>0 ? (Math.pow(1+s*(gun/365), 365/gun)-1)*100 : null;
       } else {
-        const futB=(bxtKym.coupons||[]).filter(c=>new Date(c.date+'T00:00:00')>valor).sort((a,b)=>new Date(a.date)-new Date(b.date));
-        if(futB.length===1){
-          gunSon=Math.round((new Date(futB[0].date+'T00:00:00')-valor)/86400000);
-          if(gunSon<=182) sonDonem=true;
+        const fut=(bxtKym.coupons||[]).filter(c=>new Date(c.date+'T00:00:00')>valor).sort((a,b)=>new Date(a.date)-new Date(b.date));
+        if(fut.length){
+          const flows=fut.map(c=>({g:Math.round((new Date(c.date+'T00:00:00')-valor)/86400000),t:c.rate}));
+          flows[flows.length-1].t+=100;
+          const gun0=flows[0].g;
+          // kirli100: getiri zaten kirli100'den geldi; tekrar üret
+          const kirli100=bxtKirliFromGetiri(getiri);
+          if(flows.length===1 && gun0<182){
+            // son dönem, bir dönemden kısa → para piyasası bileşiği
+            bilesik = (Math.pow(1+s*(gun0/365), 365/gun0)-1)*100;
+          } else if(kirli100!=null){
+            // dönemsel IRR → efektif yıllık: (1+i)² − 1
+            const firstFrac=gun0/182;
+            const npv=i=>flows.reduce((a,f,idx)=>a+f.t/Math.pow(1+i,firstFrac+idx),0)-kirli100;
+            let lo=-0.99,hi=5,mid;
+            for(let it=0;it<200;it++){mid=(lo+hi)/2;if(npv(mid)>0)lo=mid;else hi=mid;}
+            bilesik=((1+mid)**2-1)*100;
+          }
         }
-      }
-      if(sonDonem && gunSon>0){
-        // (1 + basit·gün/365)^(365/gün) − 1
-        bilesik = (Math.pow(1+s*(gunSon/365), 365/gunSon)-1)*100;
-      } else {
-        // çok kuponlu: yarı-yıllık bileşik → efektif yıllık: (1+s/2)² − 1
-        bilesik = ((1+s/2)**2 - 1)*100;
       }
       elB.value = bilesik!=null ? bxtFmt(bilesik, 2) : '';
     } else {
