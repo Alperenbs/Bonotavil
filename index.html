@@ -706,7 +706,8 @@ function bxtAccruedCalc(){
   const valor=bxtValorDate();
   const dates=bxtKym.coupons.map(c=>new Date(c.date+'T00:00:00')).sort((a,b)=>a-b);
   let prev=null,next=null;
-  for(const d of dates){ if(d<valor) prev=d; else { next=d; break; } }
+  // valör tam kupon günündeyse o kupon "prev" olur → geçen gün 0 → accrued 0
+  for(const d of dates){ if(d<=valor) prev=d; else { next=d; break; } }
   if(!next) return 0;
   if(!prev) prev=new Date(next.getTime()-182*86400000);
   const gecen=Math.round((valor-prev)/86400000);
