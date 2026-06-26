@@ -784,9 +784,9 @@ function bxtRecalc(src){
       // kullanıcı kirli girdi: temiz = kirli(girilen) − accrued(yuvarlı)
       const kIn = parseTutar(document.getElementById('bxtKirli').value);
       temizDisp = Number((kIn - accrDisp).toFixed(fiyatDec));
-    } else if(kirliDisp!=null){
-      // getiriden geldi: kirliyi temel al, temiz = kirli − accrued(yuvarlı)
-      temizDisp = Number((kirliDisp - accrDisp).toFixed(fiyatDec));
+    } else if(temizDisp!=null){
+      // getiriden geldi: TEMİZİ temel al (Bloomberg gibi), kirli = temiz + accrued
+      kirliDisp = Number((temizDisp + accrDisp).toFixed(fiyatDec));
     }
     if(skip!=='temiz') elT.value = temizDisp!=null ? bxtFmt(temizDisp, fiyatDec) : '';
     if(skip!=='kirli') elK.value = kirliDisp!=null ? bxtFmt(kirliDisp, fiyatDec) : '';
