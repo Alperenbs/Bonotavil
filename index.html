@@ -390,6 +390,7 @@ function flagWed(inp){
 let editingId = null;
 
 function saveKym(){
+  if(!requireAuth()) return;
   let wedWarnMsg = '';
   const t = document.getElementById('dType').value;
   const isin = document.getElementById('dISIN').value.trim();
@@ -433,6 +434,7 @@ function saveKym(){
 }
 
 function editKym(id){
+  if(!requireAuth()) return;
   const k = kymetler.find(x=>x.id===id);
   if(!k) return;
   editingId = id;
@@ -538,6 +540,7 @@ function resetForm(){
   onTypeChange();
 }
 function delKym(id){
+  if(!requireAuth()) return;
   const k = kymetler.find(x=>x.id===id);
   if(!k) return;
   if(!confirm('Bu kıymet silinsin mi?')) return;
@@ -625,6 +628,25 @@ function pickKym(id,el){
 }
 
 function floorTo(n, step){ return Math.floor(n/step)*step; }
+
+/* ============ TANIM KİLİDİ (yanlışlıkla değişikliği önlemek için) ============
+   NOT: Bu şifre tarayıcıda durur, gerçek güvenlik değildir; sadece
+   yanlışlıkla silme/düzenlemeyi engeller. */
+const TANIM_KULLANICI = '88';
+const TANIM_SIFRE = '88';
+let tanimYetkili = false;
+function requireAuth(){
+  if(tanimYetkili) return true;
+  const u = prompt('Kullanıcı adı:');
+  if(u===null) return false;
+  const s = prompt('Şifre:');
+  if(s===null) return false;
+  if(u.trim()===TANIM_KULLANICI && s.trim()===TANIM_SIFRE){ tanimYetkili = true; return true; }
+  alert('Kullanıcı adı veya şifre hatalı.');
+  return false;
+}
+
+
 
 /* ============ BXT EKRANI ============ */
 let bxtKym = null;
