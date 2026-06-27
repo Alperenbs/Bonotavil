@@ -730,19 +730,21 @@ function bxtValorDate(){
   return v? new Date(v+'T00:00:00') : new Date(new Date().setHours(0,0,0,0));
 }
 // İşlemiş kupon (accrued), nominal 100 bazında — kuponlularda
-function bxtAccruedCalc(){
-  if(!bxtKym || bxtKym.type==='ISKONTO' || !bxtKym.coupons || !bxtKym.coupons.length) return 0;
-  const valor=bxtValorDate();
-  const dates=bxtKym.coupons.map(c=>new Date(c.date+'T00:00:00')).sort((a,b)=>a-b);
+// Genel işlemiş kupon (accrued) — nominal 100 bazında. Kuponlu kıymetler için.
+function accruedCalc(kym, valor){
+  if(!kym || kym.type==='ISKONTO' || !kym.coupons || !kym.coupons.length) return 0;
+  const dates=kym.coupons.map(c=>new Date(c.date+'T00:00:00')).sort((a,b)=>a-b);
   let prev=null,next=null;
-  // valör tam kupon günündeyse o kupon "prev" olur → geçen gün 0 → accrued 0
   for(const d of dates){ if(d<=valor) prev=d; else { next=d; break; } }
   if(!next) return 0;
   if(!prev) prev=new Date(next.getTime()-182*86400000);
   const gecen=Math.round((valor-prev)/86400000);
-  // dönem oranı = ilgili kuponun oranı (next'in oranı)
-  const oran = bxtKym.coupons.find(c=> c.date===next.toISOString().slice(0,10))?.rate ?? bxtKym.coupons[0].rate;
+  const oran=kym.coupons.find(c=> c.date===next.toISOString().slice(0,10))?.rate ?? kym.coupons[0].rate;
   return oran*(gecen/182);
+}
+function bxtAccruedCalc(){
+  if(!bxtKym) return 0;
+  return accruedCalc(bxtKym, bxtValorDate());
 }
 // Kirli fiyattan getiri (100 bazında) — site mantığıyla aynı
 function bxtGetiriFromKirli(kirli100){
@@ -876,7 +878,9 @@ function bxtRecalc(src){
     const kirli100=parseTutar(document.getElementById('bxtKirli').value)/(base/100);
     if(!kirli100) return;
     const temiz100=kirli100-accr100;
-    const getiri=bxtGetiriFromKirli(kirli100);
+    // Tutarlılık: getiriyi "temiz(3 hane) + tam accrued" kirlisinden hesapla
+    const temiz3 = Number((temiz100).toFixed(3));
+    const getiri=bxtGetiriFromKirli(temiz3+accr100);
     show(temiz100, kirli100, getiri, 'kirli');
   } else {
     // kod veya valör değişti: mevcut bir değer varsa onu koru
@@ -1017,7 +1021,14 @@ function hesapla(){
       const flows = fut.map(c=>({g: Math.round((new Date(c.date+'T00:00:00')-valor)/86400000), t: c.rate}));
       flows[flows.length-1].t += 100;   // anapara (nominal 100 bazında)
       // Fiyatı 100 bazına normalize et: YP'de fiyat 1000 bazlı girilir (örn. 1027,30 → 102,730)
-      const fiyat100 = isYP ? (fiyat/10) : fiyat;
+      let fiyat100 = isYP ? (fiyat/10) : fiyat;
+      // Tutarlılık: getiri daima "temiz + tam accrued" kirlisinden hesaplanır.
+      // Kullanıcı kirli girer; temizi 3 haneye yuvarla, sonra tam accrued ile geri ekle.
+      const accr100 = accruedCalc(selKym, valor);
+      if(accr100>0){
+        const temiz100 = Number((fiyat100 - accr100).toFixed(3));
+        fiyat100 = temiz100 + accr100;
+      }
       if(flows.length===1 && flows[0].g<=182){
         // Son kupon dönemi: tek ödeme kaldı ve 1 dönemden yakın → basit faiz (para piyasası)
         basitGetiri = ((flows[0].t - fiyat100)/fiyat100)*(365/flows[0].g)*100;
