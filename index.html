@@ -184,7 +184,7 @@
         </div>
         <div class="field">
           <label>Yıllık Bileşik Getiri (%)</label>
-          <input type="text" id="bxtBilesik" readonly placeholder="—" style="background:var(--bg2)">
+          <input type="text" inputmode="decimal" id="bxtBilesik" oninput="bxtRecalc('bilesik')" placeholder="—">
         </div>
       </div>
       <div class="row">
@@ -854,9 +854,9 @@ function bxtRecalc(src){
           }
         }
       }
-      elB.value = bilesik!=null ? bxtFmt(bilesik, 2) : '';
+      elB.value = (skip!=='bilesik') ? (bilesik!=null ? bxtFmt(bilesik, 2) : '') : elB.value;
     } else {
-      elB.value = '';
+      if(skip!=='bilesik') elB.value = '';
     }
   }
 
@@ -882,12 +882,44 @@ function bxtRecalc(src){
     const temiz3 = Number((temiz100).toFixed(3));
     const getiri=bxtGetiriFromKirli(temiz3+accr100);
     show(temiz100, kirli100, getiri, 'kirli');
+  } else if(src==='bilesik'){
+    let v=document.getElementById('bxtBilesik').value.replace(/[^\d,]/g,'');
+    const bilesik=parseRate(v);
+    if(!bilesik){ return; }
+    // Bileşik → basit getiriye çevir (kıymet tipine göre)
+    const b=bilesik/100;
+    const valor=bxtValorDate();
+    let getiri=null;
+    if(bxtKym.type==='ISKONTO'){
+      const itfa=new Date(bxtKym.maturity+'T00:00:00');
+      const gun=Math.round((itfa-valor)/86400000);
+      if(gun>0) getiri=(Math.pow(1+b, gun/365)-1)*(365/gun)*100;
+    } else {
+      const fut=(bxtKym.coupons||[]).filter(c=>new Date(c.date+'T00:00:00')>valor).sort((a,b)=>new Date(a.date)-new Date(b.date));
+      if(fut.length){
+        const gun0=Math.round((new Date(fut[0].date+'T00:00:00')-valor)/86400000);
+        if(fut.length===1 && gun0<182){
+          // son dönem para piyasası: basit = ((1+bileşik)^(gün/365)−1)×(365/gün)
+          getiri=(Math.pow(1+b, gun0/365)-1)*(365/gun0)*100;
+        } else {
+          // çok dönem: efektif yıllık → dönemsel → ×2: basit = ((1+bileşik)^0.5 − 1)×2
+          getiri=((Math.pow(1+b, 0.5))-1)*2*100;
+        }
+      }
+    }
+    if(getiri==null) return;
+    const kirli100=bxtKirliFromGetiri(getiri);
+    if(kirli100==null) return;
+    const temiz100=kirli100-accr100;
+    show(temiz100, kirli100, getiri, 'bilesik');
   } else {
     // kod veya valör değişti: mevcut bir değer varsa onu koru
     const gv=parseRate(document.getElementById('bxtGetiri').value);
     const tv=parseTutar(document.getElementById('bxtTemiz').value);
+    const bv=parseRate(document.getElementById('bxtBilesik').value);
     if(gv){ bxtRecalc('getiri'); }
     else if(tv){ bxtRecalc('temiz'); }
+    else if(bv){ bxtRecalc('bilesik'); }
     else { elA.value = bxtFmt(accr100*(base/100), fiyatDec); }
   }
 }
