@@ -1030,7 +1030,7 @@ function hesapla(){
     future.forEach((c,i)=>{
       const k = adet * (c.rate/100);   // kupon = adet × oran
       toplamKupon += k;
-      rows.push({lbl:`Kupon Ödemesi #${i+1} (%${fmtNum(c.rate,4)})`, date:fmtDate(c.date), val:k});
+      rows.push({lbl:`Kupon Ödemesi #${i+1} (%${Number(c.rate).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:4})})`, date:fmtDate(c.date), val:k});
     });
   }
   const anapara = adet;                 // vade sonu anapara = elindeki adet
