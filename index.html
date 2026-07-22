@@ -1090,7 +1090,7 @@ function hesapla(){
     <button class="btn ghost" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this)">Kopyala</button>
   </div>`;
   html += `<table id="cfTable"><thead><tr><th>${selKym.bank?selKym.bank+'-':''}${selKym.isin||selKym.name}</th><th>Tarih</th><th class="num">Tutar (${cur})</th></tr></thead><tbody>`;
-  html += `<tr class="invest"><td>Yatırılan Tutar</td><td>${fmtDate(valor)}</td><td class="num">−${fmtNum(yatirilan,2)}</td></tr>`;
+  html += `<tr class="invest"><td>Yatırılan Tutar</td><td>${fmtDate(valor)}</td><td class="num">${fmtNum(yatirilan,2)}</td></tr>`;
   rows.forEach(r=>{ html += `<tr><td>${r.lbl}</td><td>${r.date}</td><td class="num">${fmtNum(r.val,2)}</td></tr>`; });
   html += `<tr><td>Anapara Dönüşü</td><td>${fmtDate(selKym.maturity)}</td><td class="num">${fmtNum(anapara,2)}</td></tr>`;
   html += `<tr class="subtotal"><td>Toplam Geri Dönüş Tutarı</td><td>—</td><td class="num">${fmtNum(toplamKupon+anapara,2)}</td></tr>`;
