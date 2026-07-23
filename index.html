@@ -580,7 +580,11 @@ function selectCur(c){
   document.getElementById('curLabel').textContent=c;
   document.getElementById('calcForm').classList.add('hide');
   document.getElementById('result').innerHTML='';
-  const list = kymetler.filter(k=>k.cur===c).sort((a,b)=> new Date(a.maturity)-new Date(b.maturity));
+  const bugun = new Date(); bugun.setHours(0,0,0,0);
+  const list = kymetler
+    .filter(k=>k.cur===c)
+    .filter(k=> new Date(k.maturity+'T00:00:00') >= bugun)   // itfası geçenleri gizle
+    .sort((a,b)=> new Date(a.maturity)-new Date(b.maturity));
   const box = document.getElementById('kymItems');
   document.getElementById('kymListLabel').textContent = c+' Kıymet Seçin';
   if(!list.length){ box.innerHTML=`<div class="empty">Bu para biriminde tanımlı kıymet yok. Önce "Kıymet Tanımı" sekmesinden ekleyin.</div>`; }
@@ -676,8 +680,10 @@ function bxtSuggest(){
   const box = document.getElementById('bxtSuggestBox');
   if(!q){ box.style.display='none'; document.getElementById('bxtInfo').style.display='none'; bxtKym=null; bxtClear(); return; }
   // ISIN içinde geçen veya banka kodu eşleşen, vade sırasına göre
+  const bugunB = new Date(); bugunB.setHours(0,0,0,0);
   const matches = kymetler
     .filter(k=> (k.isin||'').toUpperCase().includes(q) || (k.bank||'').includes(q))
+    .filter(k=> new Date(k.maturity+'T00:00:00') >= bugunB)   // itfası geçenleri gizle
     .sort((a,b)=> new Date(a.maturity)-new Date(b.maturity))
     .slice(0,20);
   if(!matches.length){ box.style.display='none'; bxtFindKym(); return; }
