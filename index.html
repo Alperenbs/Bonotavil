@@ -166,7 +166,7 @@
   <div id="panel-ypcf" class="panel" style="display:none">
     <div class="cf-head" style="margin-top:0">
       <span class="seclabel" style="margin:0;border:none;padding:0">YP DİBS Nakit Akış — 1.000 Adet</span>
-      <button class="btn ghost" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this,'ypcfTable')">Kopyala</button>
+      <button class="btn" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this,'.ypcf-t')">Tümünü Kopyala</button>
     </div>
     <div class="li-sub" id="ypcfInfo" style="margin-bottom:10px"></div>
     <div id="ypcfWrap" style="overflow-x:auto"></div>
@@ -708,31 +708,36 @@ function renderYpCf(){
     .filter(k=> k.type==='YP_KUPON')
     .filter(k=> new Date(k.maturity+'T00:00:00') > bugun)          // itfası geçenler yok
     .sort((a,b)=> new Date(a.maturity)-new Date(b.maturity));
-  let html = `<table id="ypcfTable"><thead><tr>
-    <th>Kıymet</th><th>Döviz</th><th>Ödeme Tarihi</th>
-    <th class="num">Kupon Ödemesi</th><th class="num">Anapara Dönüşü</th><th class="num">Toplam</th>
-  </tr></thead><tbody>`;
-  let satir = 0;
+  // Hesaplama ekranındaki nakit akış tablosunun aynısı; Yatırılan Tutar ve Toplam Kazanç yok
+  let html = '';
   list.forEach((k,gi)=>{
     const fut = (k.coupons||[])
       .filter(c=> new Date(c.date+'T00:00:00') > bugun)
       .sort((a,b)=> new Date(a.date)-new Date(b.date));
-    const grp = gi%2===0 ? 'grp-a' : 'grp-b';
     const ad = (k.bank?k.bank+'-':'')+(k.isin||k.name);
+    const cur = k.ccy || k.cur;
+    let toplamKupon = 0;
+    let rows = '';
     fut.forEach((c,i)=>{
       const kupon = ADET*(c.rate/100);
-      const sonMu = (i===fut.length-1) && c.date===k.maturity;
-      const anapara = sonMu ? ADET : 0;
-      const cls = grp + (i===fut.length-1 ? ' grp-end' : '');
-      html += `<tr class="${cls}"><td>${ad}</td><td>${k.ccy||''}</td><td>${fmtDate(c.date)}</td>
-        <td class="num">${fmtNum(kupon,2)}</td><td class="num">${fmtNum(anapara,2)}</td><td class="num">${fmtNum(kupon+anapara,2)}</td></tr>`;
-      satir++;
+      toplamKupon += kupon;
+      const oran = Number(c.rate).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:4});
+      rows += `<tr><td>Kupon Ödemesi #${i+1} (%${oran})</td><td>${fmtDate(c.date)}</td><td class="num">${fmtNum(kupon,2)}</td></tr>`;
     });
+    const anapara = ADET;
+    html += `<div class="cf-head">
+      <span class="seclabel" style="margin:0;border:none;padding:0">${ad}${k.ccy?' ('+k.ccy+')':''}</span>
+      <button class="btn ghost" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this,'ypcf-${gi}')">Kopyala</button>
+    </div>`;
+    html += `<table id="ypcf-${gi}" class="ypcf-t"><thead><tr><th>${ad}</th><th>Tarih</th><th class="num">Tutar (${cur})</th></tr></thead><tbody>`;
+    html += rows;
+    html += `<tr><td>Anapara Dönüşü</td><td>${fmtDate(k.maturity)}</td><td class="num">${fmtNum(anapara,2)}</td></tr>`;
+    html += `<tr class="subtotal"><td>Toplam Geri Dönüş Tutarı</td><td>—</td><td class="num">${fmtNum(toplamKupon+anapara,2)}</td></tr>`;
+    html += `</tbody></table>`;
   });
-  html += `</tbody></table>`;
   document.getElementById('ypcfWrap').innerHTML = list.length ? html : '<div class="li-sub">Vadesi gelmemiş YP DİBS yok.</div>';
   document.getElementById('ypcfInfo').textContent =
-    `${list.length} kıymet · ${satir} ödeme · ${fmtDate(bugun)} sonrası ödemeler · Kopyala ile Excel/maile yapıştırabilirsiniz`;
+    `${list.length} kıymet · 1.000 adet · ${fmtDate(bugun)} sonrası ödemeler · "Tümünü Kopyala" ile hepsini alt alta yapıştırabilirsiniz`;
 }
 
 function toggleBxt(){
@@ -1189,17 +1194,23 @@ function hesapla(){
 
 /* ---------- yardımcılar ---------- */
 function copyCashflow(btn, tableId){
-  const table = document.getElementById(tableId||'cfTable');
-  if(!table) return;
-  // Düz metin (TSV): Excel'e satır/sütun olarak yapışır
-  let tsv = '';
-  table.querySelectorAll('tr').forEach(tr=>{
-    const cells = [...tr.querySelectorAll('th,td')].map(c=> c.textContent.trim());
-    tsv += cells.join('\t') + '\n';
-  });
+  // tableId: tek tablo id'si, ya da '.' ile başlayan sınıf seçicisi (birden çok tablo alt alta)
+  const sel = tableId||'cfTable';
+  const tables = sel.startsWith('.') ? [...document.querySelectorAll(sel)] : [document.getElementById(sel)].filter(Boolean);
+  if(!tables.length) return;
+  // Düz metin (TSV): Excel'e satır/sütun olarak yapışır; tablolar arasında bir boş satır
+  const tsv = tables.map(table=>{
+    let t = '';
+    table.querySelectorAll('tr').forEach(tr=>{
+      const cells = [...tr.querySelectorAll('th,td')].map(c=> c.textContent.trim());
+      t += cells.join('\t') + '\n';
+    });
+    return t;
+  }).join('\n');
   // Zengin HTML: Outlook/Word/Excel'e biçimli tablo olarak yapışır
-  const htmlTable = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px">'
-    + table.innerHTML + '</table>';
+  const htmlTable = tables.map(table=>
+    '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px">'
+    + table.innerHTML + '</table>').join('<br>');
   const okMsg = ()=>{ const t=btn.textContent; btn.textContent='✓ Kopyalandı'; setTimeout(()=>btn.textContent=t,1500); };
   if(navigator.clipboard && window.ClipboardItem){
     const item = new ClipboardItem({
