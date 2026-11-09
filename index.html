@@ -166,7 +166,7 @@
   <!-- ============ TL DİBS NAKİT AKIŞ EKRANI ============ -->
   <div id="panel-tlcf" class="panel" style="display:none">
     <div class="cf-head" style="margin-top:0">
-      <span class="seclabel" style="margin:0;border:none;padding:0">TL DİBS Nakit Akış — 1.000 Adet</span>
+      <span class="seclabel" style="margin:0;border:none;padding:0">TL DİBS Nakit Akış — 100 Adet</span>
       <button class="btn" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this,'.tlcf-t')">Tümünü Kopyala</button>
     </div>
     <div class="li-sub" id="tlcfInfo" style="margin-bottom:10px"></div>
@@ -717,7 +717,7 @@ function toggleYpCf(){ toggleCf('yp'); }
 function toggleTlCf(){ toggleCf('tl'); }
 function renderYpCf(){ renderCf('yp'); }
 function renderCf(kind){
-  const ADET = 1000;
+  const ADET = (kind==='tl') ? 100 : 1000;   // TL DİBS 100 adet, YP DİBS 1.000 adet
   const bugun = new Date(); bugun.setHours(0,0,0,0);
   const list = kymetler
     .filter(k=> kind==='yp' ? k.type==='YP_KUPON' : (k.type==='TL_KUPON' || k.type==='ISKONTO'))
@@ -755,7 +755,7 @@ function renderCf(kind){
   const bos = kind==='yp' ? 'Vadesi gelmemiş YP DİBS yok.' : 'Vadesi gelmemiş TL DİBS yok.';
   document.getElementById(kind+'cfWrap').innerHTML = list.length ? html : '<div class="li-sub">'+bos+'</div>';
   document.getElementById(kind+'cfInfo').textContent =
-    `${list.length} kıymet · 1.000 adet · ${fmtDate(bugun)} sonrası ödemeler · "Tümünü Kopyala" ile hepsini alt alta yapıştırabilirsiniz`;
+    `${list.length} kıymet · ${fmtNum(ADET,0)} adet · ${fmtDate(bugun)} sonrası ödemeler · "Tümünü Kopyala" ile hepsini alt alta yapıştırabilirsiniz`;
 }
 
 function toggleBxt(){
