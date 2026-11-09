@@ -127,7 +127,15 @@
   .li-date{font-size:12.5px;color:var(--purple);margin-top:4px;font-weight:700}
   .card-box{border:1px solid var(--line);background:var(--card);padding:18px;margin-bottom:18px}
   .cf-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px}
-  #bxtBtn.on{background:var(--gold)}
+  #bxtBtn.on,#ypcfBtn.on{background:var(--gold)}
+  .hdr-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .hdr-btn{display:flex;flex-direction:column;align-items:center;line-height:1.25;padding:7px 14px}
+  .hdr-btn b{font-size:14px;font-weight:800;letter-spacing:.5px}
+  .hdr-btn small{font-size:10px;font-weight:600;opacity:.9;text-transform:none;letter-spacing:0}
+  #ypcfTable td.num,#ypcfTable th.num{text-align:right}
+  #ypcfTable tr.grp-a td{background:var(--card)}
+  #ypcfTable tr.grp-b td{background:var(--purple-l)}
+  #ypcfTable tr.grp-end td{border-bottom:2px solid var(--purple)}
   .suggest-box{position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--card);border:1px solid var(--purple);border-top:none;max-height:260px;overflow-y:auto;box-shadow:0 6px 16px rgba(10,42,102,.15)}
   .suggest-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px}
   .suggest-item:hover,.suggest-item.active{background:var(--purple-l)}
@@ -143,7 +151,10 @@
     <div>
       <h1>Bono/Tahvil Getiri Hesaplama</h1>
     </div>
-    <button class="btn" id="bxtBtn" style="padding:9px 18px;font-size:13px" onclick="toggleBxt()">BXT</button>
+    <div class="hdr-btns">
+      <button class="btn hdr-btn" id="bxtBtn" onclick="toggleBxt()"><b>YA</b><small>Fiyat / Getiri Hesaplama</small></button>
+      <button class="btn hdr-btn" id="ypcfBtn" onclick="toggleYpCf()"><b>YP DİBS</b><small>Nakit Akış</small></button>
+    </div>
   </header>
 
   <div class="tabs">
@@ -151,9 +162,19 @@
     <button class="tab" onclick="showTab('tanim')">Kıymet Tanımı</button>
   </div>
 
+  <!-- ============ YP DİBS NAKİT AKIŞ EKRANI ============ -->
+  <div id="panel-ypcf" class="panel" style="display:none">
+    <div class="cf-head" style="margin-top:0">
+      <span class="seclabel" style="margin:0;border:none;padding:0">YP DİBS Nakit Akış — 1.000 Adet</span>
+      <button class="btn ghost" style="padding:7px 14px;font-size:11px" onclick="copyCashflow(this,'ypcfTable')">Kopyala</button>
+    </div>
+    <div class="li-sub" id="ypcfInfo" style="margin-bottom:10px"></div>
+    <div id="ypcfWrap" style="overflow-x:auto"></div>
+  </div>
+
   <!-- ============ BXT EKRANI ============ -->
   <div id="panel-bxt" class="panel" style="display:none">
-    <div class="seclabel" style="margin-top:0">BXT — Fiyat / Getiri Ekranı</div>
+    <div class="seclabel" style="margin-top:0">YA — Fiyat / Getiri Hesaplama</div>
     <div class="card-box">
       <div class="row">
         <div class="field" style="position:relative">
@@ -353,9 +374,8 @@ function save(){
 
 /* ---------- tab ---------- */
 function showTab(t){
-  // BXT açıksa kapat
-  const bxt=document.getElementById('panel-bxt');
-  if(bxt){ bxt.style.display='none'; bxt.classList.remove('active'); document.getElementById('bxtBtn')?.classList.remove('on'); }
+  // YA / YP Nakit Akış açıksa kapat
+  closeOverlayPanels();
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   event.target.classList.add('active');
@@ -654,9 +674,71 @@ function requireAuth(){
 
 /* ============ BXT EKRANI ============ */
 let bxtKym = null;
+// Üst butonlarla açılan ekranları (YA, YP Nakit Akış) kapat
+function closeOverlayPanels(){
+  [['panel-bxt','bxtBtn'],['panel-ypcf','ypcfBtn']].forEach(([pid,bid])=>{
+    const p=document.getElementById(pid);
+    if(p){ p.style.display='none'; p.classList.remove('active'); }
+    document.getElementById(bid)?.classList.remove('on');
+  });
+}
+function backToHesap(){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelector('.tabs .tab').classList.add('active');
+  document.getElementById('panel-hesap').classList.add('active');
+}
+
+/* ============ YP DİBS NAKİT AKIŞ (1.000 adet) ============ */
+function toggleYpCf(){
+  const p = document.getElementById('panel-ypcf');
+  const isOpen = p.style.display!=='none';
+  closeOverlayPanels();
+  if(isOpen){ backToHesap(); return; }
+  document.getElementById('panel-hesap').classList.remove('active');
+  document.getElementById('panel-tanim').classList.remove('active');
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  p.style.display='block'; p.classList.add('active');
+  document.getElementById('ypcfBtn').classList.add('on');
+  renderYpCf();
+}
+function renderYpCf(){
+  const ADET = 1000;
+  const bugun = new Date(); bugun.setHours(0,0,0,0);
+  const list = kymetler
+    .filter(k=> k.type==='YP_KUPON')
+    .filter(k=> new Date(k.maturity+'T00:00:00') > bugun)          // itfası geçenler yok
+    .sort((a,b)=> new Date(a.maturity)-new Date(b.maturity));
+  let html = `<table id="ypcfTable"><thead><tr>
+    <th>Kıymet</th><th>Döviz</th><th>Ödeme Tarihi</th>
+    <th class="num">Kupon Ödemesi</th><th class="num">Anapara Dönüşü</th><th class="num">Toplam</th>
+  </tr></thead><tbody>`;
+  let satir = 0;
+  list.forEach((k,gi)=>{
+    const fut = (k.coupons||[])
+      .filter(c=> new Date(c.date+'T00:00:00') > bugun)
+      .sort((a,b)=> new Date(a.date)-new Date(b.date));
+    const grp = gi%2===0 ? 'grp-a' : 'grp-b';
+    const ad = (k.bank?k.bank+'-':'')+(k.isin||k.name);
+    fut.forEach((c,i)=>{
+      const kupon = ADET*(c.rate/100);
+      const sonMu = (i===fut.length-1) && c.date===k.maturity;
+      const anapara = sonMu ? ADET : 0;
+      const cls = grp + (i===fut.length-1 ? ' grp-end' : '');
+      html += `<tr class="${cls}"><td>${ad}</td><td>${k.ccy||''}</td><td>${fmtDate(c.date)}</td>
+        <td class="num">${fmtNum(kupon,2)}</td><td class="num">${fmtNum(anapara,2)}</td><td class="num">${fmtNum(kupon+anapara,2)}</td></tr>`;
+      satir++;
+    });
+  });
+  html += `</tbody></table>`;
+  document.getElementById('ypcfWrap').innerHTML = list.length ? html : '<div class="li-sub">Vadesi gelmemiş YP DİBS yok.</div>';
+  document.getElementById('ypcfInfo').textContent =
+    `${list.length} kıymet · ${satir} ödeme · ${fmtDate(bugun)} sonrası ödemeler · Kopyala ile Excel/maile yapıştırabilirsiniz`;
+}
+
 function toggleBxt(){
   const p = document.getElementById('panel-bxt');
   const isOpen = p.style.display!=='none';
+  if(!isOpen){ const y=document.getElementById('panel-ypcf'); if(y){ y.style.display='none'; y.classList.remove('active'); } document.getElementById('ypcfBtn')?.classList.remove('on'); }
   if(isOpen){
     p.style.display='none'; p.classList.remove('active');
     document.getElementById('bxtBtn').classList.remove('on');
@@ -1106,8 +1188,8 @@ function hesapla(){
 }
 
 /* ---------- yardımcılar ---------- */
-function copyCashflow(btn){
-  const table = document.getElementById('cfTable');
+function copyCashflow(btn, tableId){
+  const table = document.getElementById(tableId||'cfTable');
   if(!table) return;
   // Düz metin (TSV): Excel'e satır/sütun olarak yapışır
   let tsv = '';
@@ -1161,6 +1243,7 @@ renderDefs();
         renderDefs();
         // hesaplama ekranında seçim listesi açıksa tazele
         if(selCur) selectCur(selCur);
+        if(document.getElementById('panel-ypcf').style.display!=='none') renderYpCf();
       }
     })
     .catch(()=>{ /* data.json yoksa gömülü liste kullanılır, sorun değil */ });
