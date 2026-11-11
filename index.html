@@ -152,7 +152,7 @@
       <h1>Bono/Tahvil Getiri Hesaplama</h1>
     </div>
     <div class="hdr-btns">
-      <button class="btn hdr-btn" id="bxtBtn" onclick="toggleBxt()"><b>YA</b><small>Fiyat / Getiri Hesaplama</small></button>
+      <button class="btn hdr-btn" id="bxtBtn" onclick="toggleBxt()"><b>Fiyat / Getiri</b><small>Ekranı</small></button>
       <button class="btn hdr-btn" id="tlcfBtn" onclick="toggleTlCf()"><b>TL DİBS</b><small>Nakit Akış</small></button>
       <button class="btn hdr-btn" id="ypcfBtn" onclick="toggleYpCf()"><b>YP DİBS</b><small>Nakit Akış</small></button>
     </div>
@@ -185,7 +185,7 @@
 
   <!-- ============ BXT EKRANI ============ -->
   <div id="panel-bxt" class="panel" style="display:none">
-    <div class="seclabel" style="margin-top:0">YA — Fiyat / Getiri Hesaplama</div>
+    <div class="seclabel" style="margin-top:0">Fiyat / Getiri Ekranı</div>
     <div class="card-box">
       <div class="row">
         <div class="field" style="position:relative">
@@ -385,7 +385,7 @@ function save(){
 
 /* ---------- tab ---------- */
 function showTab(t){
-  // YA / YP Nakit Akış açıksa kapat
+  // Fiyat/Getiri ve Nakit Akış ekranları açıksa kapat
   closeOverlayPanels();
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
@@ -685,7 +685,7 @@ function requireAuth(){
 
 /* ============ BXT EKRANI ============ */
 let bxtKym = null;
-// Üst butonlarla açılan ekranları (YA, YP Nakit Akış) kapat
+// Üst butonlarla açılan ekranları (Fiyat/Getiri, TL/YP Nakit Akış) kapat
 function closeOverlayPanels(){
   [['panel-bxt','bxtBtn'],['panel-tlcf','tlcfBtn'],['panel-ypcf','ypcfBtn']].forEach(([pid,bid])=>{
     const p=document.getElementById(pid);
