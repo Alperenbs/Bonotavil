@@ -937,7 +937,9 @@ function bxtRecalc(src){
     // Yıllık bileşik getiri
     const elB = document.getElementById('bxtBilesik');
     if(getiri!=null){
-      const s = getiri/100;
+      // Bloomberg gibi: bileşik getiri, ekranda görünen (2 haneye yuvarlanmış) basit getiriden hesaplanır
+      const r2 = x=> Math.round(x*100)/100;
+      const s = r2(getiri)/100;
       let bilesik=null;
       const valor=bxtValorDate();
       if(bxtKym.type==='ISKONTO'){
@@ -961,7 +963,8 @@ function bxtRecalc(src){
             const npv=i=>flows.reduce((a,f,idx)=>a+f.t/Math.pow(1+i,firstFrac+idx),0)-kirli100;
             let lo=-0.99,hi=5,mid;
             for(let it=0;it<200;it++){mid=(lo+hi)/2;if(npv(mid)>0)lo=mid;else hi=mid;}
-            bilesik=((1+mid)**2-1)*100;
+            const sIrr = r2(mid*2*100)/100;          // dönemsel IRR × 2, 2 haneye yuvarlı
+            bilesik=((1+sIrr/2)**2-1)*100;
           }
         }
       }
